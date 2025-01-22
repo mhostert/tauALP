@@ -4,6 +4,105 @@ import pandas as pd
 from DarkNews import const
 from DarkNews import Cfourvec as Cfv
 
+from . import models
+
+
+# Experiments and their parameters
+tau_per_POT = 5e-7
+ICARUS_exp = {
+    "name": "ICARUS",
+    "L": 803e2,
+    "theta0": 0.0968,
+    "dX": 2 * 2.67e2,
+    "dY": 2.86e2,
+    "dZ": 17.00e2,
+    "norm": tau_per_POT * 4.2e21,
+    "Emin": 0.1,
+}
+MicroBooNE_exp = {
+    "name": "MicroBooNE",
+    "L": 685e2,
+    "theta0": 0.146,
+    "dX": 2.26e2,
+    "dY": 2.03e2,
+    "dZ": 9.42e2,
+    "norm": tau_per_POT * 4.2e21,
+    "Emin": 0.1,
+}
+NoVA_exp = {
+    "name": "NOvA",
+    "L": 990e2,
+    "theta0": 14.6e-3,
+    "dX": 3.9e2,
+    "dY": 3.9e2,
+    "dZ": 12.7e2,
+    "norm": tau_per_POT * 4.2e21,
+    "Emin": 0.1,
+}
+tau_per_POT = 2.5e-6
+CHARM_exp = {
+    "name": "CHARM",
+    "L": 480e2,
+    "theta0": np.arctan(5 / 480e2),
+    "dX": 3e2,
+    "dY": 3e2,
+    "dZ": 35e2,
+    "norm": tau_per_POT * 2.4e18,
+    "Emin": 1,
+}
+BEBC_exp = {
+    "name": "BEBC",
+    "L": 404e2,
+    "theta0": 0,
+    "dX": 3.57e2,
+    "dY": 2.52e2,
+    "dZ": 1.85e2,
+    "norm": tau_per_POT * 2.72e18,
+    "Emin": 1,
+}
+NA62_exp = {
+    "name": "NA62",
+    "L": 79.4e2,
+    "theta0": 0,
+    "dX": 2e2,
+    "dY": 2e2,
+    "dZ": 78e2,
+    "norm": tau_per_POT * 1.4e17,
+    "Emin": 1,
+}
+SHiP_exp = {
+    "name": "SHiP",
+    "L": 32e2,
+    "theta0": 0,
+    "dX": 2.5e2,
+    "dY": 4.3e2,
+    "dZ": 50e2,
+    "norm": tau_per_POT * 6e20,
+    "Emin": 1,
+}
+
+sigma_ccbar = 30e-30  # cm^2
+FASER_exp = {
+    "name": "FASER",
+    "L": 480e2,
+    "theta0": np.arctan(6.5 / 480e2),
+    "dX": 0.2e2,
+    "dY": 0.2e2,
+    "dZ": 1e2,
+    "norm": 150e39 * sigma_ccbar,
+    "Emin": 100,
+}
+FASER2_exp = {
+    "name": "FASER2",
+    "L": 480e2,
+    "theta0": 0,
+    "dX": 1e2,
+    "dY": 3.14e2,
+    "dZ": 5e2,
+    "norm": 3e42 * sigma_ccbar,
+    "Emin": 100,
+}
+
 
 def load_events(file_paths):
     # Initialize an empty DataFrame
@@ -18,20 +117,72 @@ def load_events(file_paths):
 
 
 class Experiment:
-    def __init__(self, file_paths, name, L, theta0, dX, dY, dZ, norm):
+    def __init__(self, file_paths, exp_dic, alp=None):
         self.df_taus = load_events(file_paths)
-        self.name = name
-        self.L = L
-        self.theta0 = theta0
-        self.dX = dX
-        self.dY = dY
-        self.dZ = dZ
-        self.norm = norm
+        self.df_taus["weight"] = self.df_taus.weight / self.df_taus.weight.sum()
 
-        self.dtheta = np.arctan(dX / L)
-        self.dphi = np.arctan(dY / L)
+        # All experimental attributes
+        required_keys = ["name", "L", "theta0", "dX", "dY", "dZ", "norm", "Emin"]
+        for key, value in exp_dic.items():
+            required_keys.pop(required_keys.index(key))
+            setattr(self, key, value)
+        if required_keys:
+            raise ValueError(f"Missing keys: {required_keys}")
 
-    def get_alp_spectrum(self, m_alp):
+        if alp is not None:
+            self.alp = alp
+        else:
+            self.alp = models.ALP(0.5, 1e-5)
+
+        self.dtheta = np.arctan(self.dX / self.L)
+        self.dphi = np.arctan(self.dY / self.L)
+
+        self.get_event_rate(self.alp)
+
+    def get_alp_events(self, alp, channel="e"):
+
+        self.nevents = len(self.df_taus)
+        phi_alp = np.random.rand(self.nevents) * 2 * np.pi
+        ctheta_alp = 2 * np.random.rand(self.nevents) - 1
+
+        m_lepton = const.m_e if channel == "e" else const.m_mu if channel == "mu" else 0
+        ECM_alp = (
+            (const.m_tau**2 - m_lepton**2 + alp.m_a**2)
+            / 2
+            / const.m_tau
+            * np.ones(self.nevents)
+        )
+        pCM_alp = np.sqrt(ECM_alp**2 - alp.m_a**2)
+
+        p4_alp_CM = Cfv.build_fourvec(ECM_alp, pCM_alp, ctheta_alp, phi_alp)
+        self.df_taus["p"] = np.sqrt(
+            self.df_taus.px**2 + self.df_taus.py**2 + self.df_taus.pz**2
+        )
+        ctheta_tau_LAB = (self.df_taus.pz / self.df_taus.p).to_numpy()
+        phitau_LAB = np.arctan2(self.df_taus.py, self.df_taus.px).to_numpy()
+        beta = -(self.df_taus.p / self.df_taus.E).to_numpy()
+        beta[beta < -1] = -1
+        self.p4_alp = Cfv.Tinv(
+            p4_alp_CM,
+            beta,
+            ctheta_tau_LAB,
+            phitau_LAB,
+        )
+
+        self.weights = self.df_taus["weight"]
+        self.weights = (
+            self.weights
+            if channel == "e"
+            else (
+                self.weights * alp.BR_tau_to_a_mu() / alp.BR_tau_to_a_e()
+                if channel == "mu"
+                else 0
+            )
+        )
+
+        return self.p4_alp, self.weights
+
+    def get_alp_spectrum(self, alp):
         """Get histogram of ALP momenta produced in a given tau decay channel
 
                 * samples 4 momenta for tau decays to ALPs
@@ -46,76 +197,104 @@ class Experiment:
             _type_: _description_
         """
 
-        nevents = len(self.df_taus)
-        phi_alp = np.random.rand(nevents) * 2 * np.pi
-        ctheta_alp = 2 * np.random.rand(nevents) - 1
-        ECM_alp = (
-            (const.m_tau**2 - const.m_e**2 + m_alp**2)
-            / 2
-            / const.m_tau
-            * np.ones(nevents)
-        )
-        pCM_alp = np.sqrt(ECM_alp**2 - m_alp**2)
+        # Two branching ratios
+        if alp.BR_tau_to_a_e() > 0 and alp.BR_tau_to_a_mu() > 0:
+            p4_e, w_e = self.get_alp_events(alp, channel="e")
+            p4_mu, w_mu = self.get_alp_events(alp, channel="mu")
 
-        p4_alp_CM = Cfv.build_fourvec(ECM_alp, pCM_alp, ctheta_alp, phi_alp)
-        self.df_taus["p"] = np.sqrt(
-            self.df_taus.px**2 + self.df_taus.py**2 + self.df_taus.pz**2
-        )
-        ctheta_tau_LAB = (self.df_taus.pz / self.df_taus.p).to_numpy()
-        phitau_LAB = np.arctan2(self.df_taus.py, self.df_taus.px).to_numpy()
-        p4_alp = Cfv.Tinv(
-            p4_alp_CM,
-            -(self.df_taus.p / self.df_taus.E).to_numpy(),
-            ctheta_tau_LAB,
-            phitau_LAB,
-        )
+            self.p4_alp = np.append(p4_e, p4_mu, axis=0)
+            self.weights = np.append(w_e, w_mu)
+            del w_e, w_mu, p4_mu, p4_e
 
-        theta_alp = np.arccos(Cfv.get_cosTheta(p4_alp))
-        mask_alp_in_acc = (self.theta0 - self.dtheta / 2 < theta_alp) & (
-            theta_alp < self.theta0 + self.dtheta / 2
-        )
+        elif alp.BR_tau_to_a_e() > 0 and alp.BR_tau_to_a_mu() == 0:
+            self.p4_alp, self.weights = self.get_alp_events(alp, channel="e")
 
-        # If less than 5 generated events were within acceptance, call it a day and return zeros
-        if mask_alp_in_acc.sum() < 5:
-            p_bins = np.linspace(p4_alp[:, 0].min(), p4_alp[:, 0].max(), 50)
+        elif alp.BR_tau_to_a_e() == 0 and alp.BR_tau_to_a_mu() > 0:
+            self.p4_alp, self.weights = self.get_alp_events(alp, channel="mu")
+
+        # projected x,y at the plane of the detector
+        self.p_alp = np.sqrt(self.p4_alp[:, 0] ** 2 - alp.m_a**2)
+        self.x_alp = self.p4_alp[:, 1] / self.p_alp * self.L
+        self.y_alp = self.p4_alp[:, 2] / self.p_alp * self.L
+
+        # detector center at the plane of the detector
+        x0 = self.L * np.tan(self.theta0)
+        y0 = 0
+
+        if self.theta0 > 1e-2:
+            theta_alp = np.arccos(Cfv.get_cosTheta(self.p4_alp))
+            mask_alp_in_acc = (self.theta0 - self.dtheta / 2 < theta_alp) & (
+                theta_alp < self.theta0 + self.dtheta / 2
+            )
+            signal_selection = self.p4_alp[:, 0] > self.Emin
+            self.eff = (
+                self.dphi
+                / np.pi
+                * self.weights[signal_selection].sum()
+                / self.weights.sum()
+            )
+        else:
+            # NOTE: Selection of events in a square
+            # NOTE: Assume a cuboid... need to extend for SHiP
+            mask_alp_in_acc = (np.abs(self.x_alp - x0) < self.dX / 2) & (
+                np.abs(self.y_alp - y0) < self.dY / 2
+            )
+            signal_selection = self.p4_alp[:, 0] > self.Emin
+            self.eff = self.weights[signal_selection].sum() / self.weights.sum()
+
+        # If less than 5 generated events were within acceptance, dont even try to compute rate
+        if mask_alp_in_acc.sum() < 3:
+            p_bins = np.linspace(self.p_alp.min(), self.p_alp.max(), 20)
+            self.geom_acceptance = 0
             return np.zeros(len(p_bins) - 1), p_bins
 
         # Else, histogram event rate in alp energy
         else:
-            p_bins = np.linspace(
-                p4_alp[mask_alp_in_acc, 0].min(), p4_alp[mask_alp_in_acc, 0].max(), 50
-            )
+            p_bins = np.linspace(self.p_alp.min(), self.p_alp.max(), 20)
 
             h, p_bins = np.histogram(
-                np.sqrt(p4_alp[:, 0] ** 2 - m_alp**2)[mask_alp_in_acc], bins=p_bins
+                self.p_alp[mask_alp_in_acc],
+                bins=p_bins,
+                weights=self.weights[mask_alp_in_acc],
             )
 
-            # NOTE: CHECK -- is this really pi???
-            self.eff_dphi = self.dphi / np.pi
-            self.geom_acceptance = mask_alp_in_acc.sum() / nevents * self.eff_dphi
+            self.geom_acceptance = (
+                self.weights[mask_alp_in_acc].sum() / self.weights.sum()
+            )
+
             return h / h.sum(), p_bins
 
     def get_event_rate(self, alp):
 
-        dPhidp, palp = self.get_alp_spectrum(alp.m_a)
+        self.dPhidp, self.palp = self.get_alp_spectrum(alp)
 
-        if np.array(palp).size > 1:
-            dp = np.diff(palp)
-            pc = palp[:-1] + dp / 2
-            return (
-                alp.BR_tau_to_a_e()
-                * np.sum(dp * dPhidp * alp.prob_decay(pc, self.L, self.dZ))
-                * self.norm
-                * self.geom_acceptance
+        if np.array(self.palp).size > 1:
+            self.dp = np.diff(self.palp)
+            self.pc = self.palp[:-1] + self.dp / 2
+            self.flux = (
+                alp.BR_tau_to_a_e() * self.norm * self.geom_acceptance * self.eff
+            )
+            return self.flux * np.sum(
+                self.dp * self.dPhidp * alp.prob_decay(self.pc, self.L, self.dZ)
             )
         else:
-            return (
+            self.flux = (
                 alp.BR_tau_to_a_e()
-                * dPhidp
-                * alp.prob_decay(palp, self.L, self.dZ)
+                * self.dPhidp
                 * self.norm
                 * self.geom_acceptance
+                * self.eff
             )
+            return self.flux * alp.prob_decay(self.palp, self.L, self.dZ)
+
+    def reweight(self, alp1, alp2):
+
+        new_rate = self.flux * (
+            alp2.BR_tau_to_a_e()
+            / alp1.BR_tau_to_a_e()
+            * np.sum(self.dp * self.dPhidp * alp2.prob_decay(self.pc, self.L, self.dZ))
+        )
+        return new_rate
 
     # def get_tau_events(df):
     #     tau_events = np.abs(df.pid) == 15

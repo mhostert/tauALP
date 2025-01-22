@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
   // // Enable QCD processes which are necessary for hadron production
   // pythia.readString("HardQCD:all = on");
   pythia.readString("HardQCD:hardccbar = on");
-  pythia.readString("HardQCD:hardbbbar = off");
+  pythia.readString("HardQCD:hardbbbar = on");
 
   // // Allow soft QCD, which is more appropriate at low energies
   pythia.readString("SoftQCD:all = on");
@@ -85,8 +85,12 @@ int main(int argc, char* argv[]) {
   //pythia.readString(“PhaseSpace:pTHatMin = 4.“);
   pythia.readString("431:onMode = off");
   pythia.readString("431:onIfAny = 15");
+  pythia.readString("-431:onMode = off");
+  pythia.readString("-431:onIfAny = -15");
   pythia.readString("411:onMode = off");
   pythia.readString("411:onIfAny = 15");
+  pythia.readString("-411:onMode = off");
+  pythia.readString("-411:onIfAny = -15");
   pythia.readString("100443:onMode = off");
   pythia.readString("100443:onIfAny = 15");
   pythia.readString("15:onMode = off");
@@ -145,137 +149,138 @@ int main(int argc, char* argv[]) {
         if (abs(id) == 15) {
           ++tauCount;
           
-          // Write particle data to the file
-          outFile << generatedTauEvents << " " 
-                << id << " " 
-                << pythia.event[i].status() << " " 
-                << pythia.event[i].mother1() << " " 
-                << pythia.event[i].mother2() << " " 
-                << pythia.event[i].daughter1() << " " 
-                << pythia.event[i].daughter2() << " " 
-                << pythia.event[i].e() << " " 
-                << pythia.event[i].px() << " " 
-                << pythia.event[i].py() << " " 
-                << pythia.event[i].pz() << " "
-                << 1 << std::endl;
-        }
+            // Write particle data to the file with double precision
+            outFile << std::fixed << std::setprecision(10)
+              << generatedTauEvents << " " 
+              << id << " " 
+              << pythia.event[i].status() << " " 
+              << pythia.event[i].mother1() << " " 
+              << pythia.event[i].mother2() << " " 
+              << pythia.event[i].daughter1() << " " 
+              << pythia.event[i].daughter2() << " " 
+              << pythia.event[i].e() << " " 
+              << pythia.event[i].px() << " " 
+              << pythia.event[i].py() << " " 
+              << pythia.event[i].pz() << " "
+              << 1 << std::endl;
+          }
 
-        // D+/D- meson found (skipping D* decay for now)
-        if (abs(id) == 411 || abs(id) == 413) {
-          ++DCount;
+        // // D+/D- meson found (skipping D* decay for now)
+        // if (abs(id) == 411 || abs(id) == 413) {
+        //   ++DCount;
 
-          outFile << generatedTauEvents << " " 
-                << id << " " 
-                << pythia.event[i].status() << " " 
-                << pythia.event[i].mother1() << " " 
-                << pythia.event[i].mother2() << " " 
-                << pythia.event[i].daughter1() << " " 
-                << pythia.event[i].daughter2() << " " 
-                << pythia.event[i].e() << " " 
-                << pythia.event[i].px() << " " 
-                << pythia.event[i].py() << " " 
-                << pythia.event[i].pz() << " "
-                << 1 << std::endl; 
+        //   outFile << generatedTauEvents << " " 
+        //         << id << " " 
+        //         << pythia.event[i].status() << " " 
+        //         << pythia.event[i].mother1() << " " 
+        //         << pythia.event[i].mother2() << " " 
+        //         << pythia.event[i].daughter1() << " " 
+        //         << pythia.event[i].daughter2() << " " 
+        //         << pythia.event[i].e() << " " 
+        //         << pythia.event[i].px() << " " 
+        //         << pythia.event[i].py() << " " 
+        //         << pythia.event[i].pz() << " "
+        //         << 1 << std::endl; 
      
 
-          // // Get the D meson's four-momentum
-          Vec4 pD = pythia.event[i].p();
+        //   // // Get the D meson's four-momentum
+        //   Vec4 pD = pythia.event[i].p();
 
-          // // Perform a toy model decay D -> nu_tau + tau
-          double beta = pD.pAbs() / pD.e();
-          double gamma = pD.e() / mD;
+        //   // // Perform a toy model decay D -> nu_tau + tau
+        //   double beta = pD.pAbs() / pD.e();
+        //   double gamma = pD.e() / mD;
 
-          // // // Assume isotropic decay for simplicity
-          double phi = 2 * M_PI * unif(gen);
-          double theta = acos(1 - 2 * unif(gen));
+        //   // // // Assume isotropic decay for simplicity
+        //   double phi = 2 * M_PI * unif(gen);
+        //   double theta = acos(1 - 2 * unif(gen));
 
-          // Tau and nu_tau momenta in D rest frame
-          double pMagRest = sqrt((mD - mTau) * (mD + mTau));
-          Vec4 pTauRest(pMagRest * sin(theta) * cos(phi),
-                        pMagRest * sin(theta) * sin(phi),
-                        pMagRest * cos(theta),
-                        mTau);
+        //   // Tau and nu_tau momenta in D rest frame
+        //   double pMagRest = sqrt((mD - mTau) * (mD + mTau));
+        //   Vec4 pTauRest(pMagRest * sin(theta) * cos(phi),
+        //                 pMagRest * sin(theta) * sin(phi),
+        //                 pMagRest * cos(theta),
+        //                 mTau);
         
-          // 2 body decay kinematics
-          Vec4 pNuTauRest = Vec4(0, 0, 0, 0) - pTauRest;
+        //   // 2 body decay kinematics
+        //   Vec4 pNuTauRest = Vec4(0, 0, 0, 0) - pTauRest;
 
-          // Boost to this event's frame
-          pTauRest.bst(pD / pD.mCalc());
-          pNuTauRest.bst(pD / pD.mCalc());
+        //   // Boost to this event's frame
+        //   pTauRest.bst(pD / pD.mCalc());
+        //   pNuTauRest.bst(pD / pD.mCalc());
 
-          // Write particle data to the file
-          outFile << generatedTauEvents << " " 
-                << ((id > 0) ? 15 : ((id < 0) ? -15 : 0)) << " " 
-                << pythia.event[i].status() << " " 
-                << pythia.event[i].mother1() << " " 
-                << pythia.event[i].mother2() << " " 
-                << pythia.event[i].daughter1() << " " 
-                << pythia.event[i].daughter2() << " " 
-                << pTauRest.e() << " " 
-                << pTauRest.px() << " " 
-                << pTauRest.py() << " " 
-                << pTauRest.pz() << " "
-                << 1.2e-3 << std::endl; // Br(D -- > nutau tau)
-        }
+        //   // Write particle data to the file
+        //   outFile << generatedTauEvents << " " 
+        //         << ((id > 0) ? 15 : ((id < 0) ? -15 : 0)) << " " 
+        //         << pythia.event[i].status() << " " 
+        //         << pythia.event[i].mother1() << " " 
+        //         << pythia.event[i].mother2() << " " 
+        //         << pythia.event[i].daughter1() << " " 
+        //         << pythia.event[i].daughter2() << " " 
+        //         << pTauRest.e() << " " 
+        //         << pTauRest.px() << " " 
+        //         << pTauRest.py() << " " 
+        //         << pTauRest.pz() << " "
+        //         << 1.2e-3 << std::endl; // Br(D -- > nutau tau)
+        // }
 
-        // Ds+/Ds- meson found
-        if (abs(id) == 431 || abs(id) == 433) {
-          ++DCount;
+        // // Ds+/Ds- meson found
+        // if (abs(id) == 431 || abs(id) == 433) {
+        //   ++DCount;
 
-          outFile << generatedTauEvents << " " 
-                << id << " " 
-                << pythia.event[i].status() << " " 
-                << pythia.event[i].mother1() << " " 
-                << pythia.event[i].mother2() << " " 
-                << pythia.event[i].daughter1() << " " 
-                << pythia.event[i].daughter2() << " " 
-                << pythia.event[i].e() << " " 
-                << pythia.event[i].px() << " " 
-                << pythia.event[i].py() << " " 
-                << pythia.event[i].pz() << " "
-                << 1 << std::endl; 
+        //   outFile << generatedTauEvents << " " 
+        //         << id << " " 
+        //         << pythia.event[i].status() << " " 
+        //         << pythia.event[i].mother1() << " " 
+        //         << pythia.event[i].mother2() << " " 
+        //         << pythia.event[i].daughter1() << " " 
+        //         << pythia.event[i].daughter2() << " " 
+        //         << pythia.event[i].e() << " " 
+        //         << pythia.event[i].px() << " " 
+        //         << pythia.event[i].py() << " " 
+        //         << pythia.event[i].pz() << " "
+        //         << 1 << std::endl; 
      
 
-          // // Get the D meson's four-momentum
-          Vec4 pD = pythia.event[i].p();
+        //   // // Get the D meson's four-momentum
+        //   Vec4 pD = pythia.event[i].p();
 
-          // // Perform a toy model decay D -> nu_tau + tau
-          double beta = pD.pAbs() / pD.e();
-          double gamma = pD.e() / mDs;
+        //   // // Perform a toy model decay D -> nu_tau + tau
+        //   double beta = pD.pAbs() / pD.e();
+        //   double gamma = pD.e() / mDs;
 
-          // // // Assume isotropic decay for simplicity
-          double phi = 2 * M_PI * unif(gen);
-          double theta = acos(1 - 2 * unif(gen));
+        //   // // // Assume isotropic decay for simplicity
+        //   double phi = 2 * M_PI * unif(gen);
+        //   double theta = acos(1 - 2 * unif(gen));
 
-          // Tau and nu_tau momenta in D rest frame
-          double pMagRest = sqrt((mDs - mTau) * (mDs + mTau));
-          Vec4 pTauRest(pMagRest * sin(theta) * cos(phi),
-                        pMagRest * sin(theta) * sin(phi),
-                        pMagRest * cos(theta),
-                        mTau);
+        //   // Tau and nu_tau momenta in D rest frame
+        //   double pMagRest = sqrt((mDs - mTau) * (mDs + mTau));
+        //   Vec4 pTauRest(pMagRest * sin(theta) * cos(phi),
+        //                 pMagRest * sin(theta) * sin(phi),
+        //                 pMagRest * cos(theta),
+        //                 mTau);
         
-          // 2 body decay kinematics
-          Vec4 pNuTauRest = Vec4(0, 0, 0, 0) - pTauRest;
+        //   // 2 body decay kinematics
+        //   Vec4 pNuTauRest = Vec4(0, 0, 0, 0) - pTauRest;
 
-          // Boost to this event's frame
-          pTauRest.bst(pD / pD.mCalc());
-          pNuTauRest.bst(pD / pD.mCalc());
+        //   // Boost to this event's frame
+        //   pTauRest.bst(pD / pD.mCalc());
+        //   pNuTauRest.bst(pD / pD.mCalc());
           
-          // Write particle data to the file
-          outFile << generatedTauEvents << " " 
-                << ((id > 0) ? 15 : ((id < 0) ? -15 : 0)) << " " 
-                << pythia.event[i].status() << " " 
-                << pythia.event[i].mother1() << " " 
-                << pythia.event[i].mother2() << " " 
-                << pythia.event[i].daughter1() << " " 
-                << pythia.event[i].daughter2() << " " 
-                << pTauRest.e() << " " 
-                << pTauRest.px() << " " 
-                << pTauRest.py() << " " 
-                << pTauRest.pz() << " "
-                << 5.36e-2 << std::endl; // Br(Ds -- > nutau tau)
-        }
+        //   // Write particle data to the file
+        //   outFile << generatedTauEvents << " " 
+        //         << ((id > 0) ? 15 : ((id < 0) ? -15 : 0)) << " " 
+        //         << pythia.event[i].status() << " " 
+        //         << pythia.event[i].mother1() << " " 
+        //         << pythia.event[i].mother2() << " " 
+        //         << pythia.event[i].daughter1() << " " 
+        //         << pythia.event[i].daughter2() << " " 
+        //         << pTauRest.e() << " " 
+        //         << pTauRest.px() << " " 
+        //         << pTauRest.py() << " " 
+        //         << pTauRest.pz() << " "
+        //         << 5.36e-2 << std::endl; // Br(Ds -- > nutau tau)
 
+        // }
 
       }
     }

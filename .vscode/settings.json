@@ -48,6 +48,13 @@
         "streambuf": "cpp",
         "tuple": "cpp",
         "typeinfo": "cpp",
-        "algorithm": "cpp"
-    }
+        "algorithm": "cpp",
+        "__node_handle": "cpp",
+        "cwctype": "cpp",
+        "execution": "cpp",
+        "iomanip": "cpp",
+        "iostream": "cpp",
+        "variant": "cpp"
+    },
+    "makefile.configureOnOpen": false
 }

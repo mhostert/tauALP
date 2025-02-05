@@ -122,13 +122,22 @@ def B1_loop(tau):
 
 
 class ALP:
-    def __init__(self, m_a, f_a, c_gg=0):
+    def __init__(
+        self,
+        m_a,
+        f_a,
+        c_gg=0,
+        c_lepton=None,
+    ):
         self.f_a = f_a
         self.m_a = m_a
         self.Lambda_NP = 4 * np.pi * self.f_a
 
         # NOTE: democratic couplings
-        self.c_lepton = np.ones((3, 3))
+        if c_lepton is None:
+            self.c_lepton = np.ones((3, 3))
+        else:
+            self.c_lepton = c_lepton
 
         self.c_gg = c_gg  # + self.c_gg_eff()
         self.c_BB = self.c_lepton.diagonal().sum() / 2

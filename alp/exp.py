@@ -18,6 +18,7 @@ ICARUS_exp = {
     "dZ": 17.00e2,
     "norm": tau_per_POT * 4.2e21,
     "Emin": 0.1,
+    "final_states": ["ee", "em", "me", "mm"],
 }
 MicroBooNE_exp = {
     "name": "MicroBooNE",
@@ -28,6 +29,7 @@ MicroBooNE_exp = {
     "dZ": 9.42e2,
     "norm": tau_per_POT * 4.2e21,
     "Emin": 0.1,
+    "final_states": ["ee", "em", "me", "mm"],
 }
 NoVA_exp = {
     "name": "NOvA",
@@ -38,18 +40,20 @@ NoVA_exp = {
     "dZ": 12.7e2,
     "norm": tau_per_POT * 4.2e21,
     "Emin": 0.1,
+    "final_states": ["ee", "em", "me", "mm"],
 }
 tau_per_POT = 2.7e-6
 CHARM_exp = {
     "name": "CHARM",
     "L": 480e2,
-    "theta0": 0,  # np.arctan(5e2 / 480e2),
-    # "dX": 3e2,
-    # "dY": 3e2,
-    "R": 1.5e2,
+    "theta0": np.arctan(5e2 / 480e2),
+    "dX": 3e2,
+    "dY": 3e2,
+    # "R": 1.5e2,
     "dZ": 35e2,
     "norm": tau_per_POT * 2.4e18,
-    "Emin": 0 * 1,
+    "Emin": 1,
+    "final_states": ["ee", "em", "me", "mm"],
 }
 BEBC_exp = {
     "name": "BEBC",
@@ -60,6 +64,7 @@ BEBC_exp = {
     "dZ": 1.85e2,
     "norm": tau_per_POT * 2.72e18,
     "Emin": 0 * 1,
+    "final_states": ["ee", "em", "me", "mm"],
 }
 NA62_exp = {
     "name": "NA62",
@@ -70,27 +75,54 @@ NA62_exp = {
     "dZ": 78e2,
     "norm": tau_per_POT * 1.4e17,
     "Emin": 1,
+    "final_states": ["ee", "mm"],
+}
+PROTO_DUNE_NP02_exp = {
+    "name": "ProtoDUNE-NP02",
+    "L": 677e2,
+    "x0": np.arctan(3e2 / 677e2),
+    "y0": np.arctan(1.5e2 / 677e2),
+    "dX": 6e2,
+    "dY": 7e2,
+    "dZ": 6e2,
+    "norm": tau_per_POT * 1.75e19,
+    "Emin": 1,
+    "final_states": ["ee", "em", "me", "mm"],
+}
+PROTO_DUNE_NP04_exp = {
+    "name": "ProtoDUNE-NP04",
+    "L": 723e2,
+    "x0": np.arctan(3e2 / 677e2),
+    "y0": np.arctan(1.5e2 / 677e2),
+    "dX": 6e2,
+    "dY": 7e2,
+    "dZ": 6e2,
+    "norm": tau_per_POT * 1.75e19,
+    "Emin": 1,
+    "final_states": ["ee", "em", "me", "mm"],
 }
 SHiP_exp = {
     "name": "SHiP",
-    "L": 32e2,
+    "L": 33.7e2,
     "theta0": 0,
     "dX": 2.5e2,
     "dY": 4.3e2,
-    "dZ": 50e2,
+    "dZ": 49.6e2,
     "norm": tau_per_POT * 6e20,
-    "Emin": 0,
+    "Emin": 1,
+    "final_states": ["ee", "em", "me", "mm"],
 }
 
 sigma_tau = 25.95e-30  # cm^2
 FASER_exp = {
     "name": "FASER",
     "L": 480e2,
-    "theta0": np.arctan(6.5 / 480e2) * 0,
+    "theta0": np.arctan(6.5 / 480e2),
     "R": 0.1e2,
     "dZ": 1.5e2,
     "norm": 150e39 * sigma_tau,
-    "Emin": 500,
+    "Emin": 100,
+    "final_states": ["ee", "em", "me", "mm"],
 }
 FASER2_exp = {
     "name": "FASER2",
@@ -99,7 +131,8 @@ FASER2_exp = {
     "R": 1e2,
     "dZ": 5e2,
     "norm": 3e42 * sigma_tau,
-    "Emin": 500,
+    "Emin": 100,
+    "final_states": ["ee", "em", "me", "mm"],
 }
 
 
@@ -121,7 +154,7 @@ class Experiment:
         self.df_taus["weight"] = self.df_taus.weight / self.df_taus.weight.sum()
 
         # All experimental attributes
-        required_keys = ["name", "L", "theta0", "dZ", "norm", "Emin"]
+        required_keys = ["name", "L", "dZ", "norm", "Emin", "final_states"]
         for key, value in exp_dic.items():
             try:
                 required_keys.pop(required_keys.index(key))
@@ -141,6 +174,15 @@ class Experiment:
             self.dtheta = np.arctan(self.dX / self.L)
             self.dphi = np.arctan(self.dY / self.L)
 
+        if "theta0" in exp_dic:
+            # detector center at the plane of the detector
+            self.x0 = self.L * np.tan(self.theta0)
+            self.y0 = 0
+        else:
+            # detector center at the plane of the detector
+            self.x0 = exp_dic["x0"]
+            self.y0 = exp_dic["y0"]
+
         if alp is not None:
             self.alp = alp
         else:
@@ -148,7 +190,10 @@ class Experiment:
 
         self.get_event_rate(self.alp)
 
-    def get_alp_events(self, alp, channel="e"):
+    def get_alp_events_exclusive(self, alp, channel="e"):
+        """
+        Get ALP events for a given tau decay channel
+        """
 
         self.nevents = len(self.df_taus)
         phi_alp = np.random.rand(self.nevents) * 2 * np.pi
@@ -191,7 +236,34 @@ class Experiment:
 
         return self.p4_alp, self.weights
 
-    def get_alp_spectrum(self, alp, selection=True):
+    def get_alp_events(self, alp):
+        """
+        Get ALP events for ALL tau decay channels
+        """
+
+        # Two branching ratios
+        if alp.BR_tau_to_a_e() > 0 and alp.BR_tau_to_a_mu() > 0:
+            p4_e, w_e = self.get_alp_events_exclusive(alp, channel="e")
+            p4_mu, w_mu = self.get_alp_events_exclusive(alp, channel="mu")
+
+            self.p4_alp = np.append(p4_e, p4_mu, axis=0)
+            self.weights = np.append(w_e, w_mu)
+            del w_e, w_mu, p4_mu, p4_e
+
+        elif alp.BR_tau_to_a_e() > 0 and alp.BR_tau_to_a_mu() == 0:
+            self.p4_alp, self.weights = self.get_alp_events_exclusive(alp, channel="e")
+
+        elif alp.BR_tau_to_a_e() == 0 and alp.BR_tau_to_a_mu() > 0:
+            self.p4_alp, self.weights = self.get_alp_events_exclusive(alp, channel="mu")
+
+        # projected x,y at the plane of the detector
+        self.p_alp = np.sqrt(self.p4_alp[:, 0] ** 2 - alp.m_a**2)
+        self.x_alp = self.p4_alp[:, 1] / self.p_alp * self.L
+        self.y_alp = self.p4_alp[:, 2] / self.p_alp * self.L
+
+        return self.p4_alp, self.weights
+
+    def get_alp_spectrum(self, alp, selection=True, bins=40, generate_events=True):
         """Get histogram of ALP momenta produced in a given tau decay channel
 
                 * samples 4 momenta for tau decays to ALPs
@@ -206,33 +278,13 @@ class Experiment:
             _type_: _description_
         """
 
-        # # Two branching ratios
-        if alp.BR_tau_to_a_e() > 0 and alp.BR_tau_to_a_mu() > 0:
-            p4_e, w_e = self.get_alp_events(alp, channel="e")
-            p4_mu, w_mu = self.get_alp_events(alp, channel="mu")
+        if generate_events:
+            # Get ALP events for all channels
+            self.p4_alp, self.weights = self.get_alp_events(alp)
 
-            self.p4_alp = np.append(p4_e, p4_mu, axis=0)
-            self.weights = np.append(w_e, w_mu)
-            del w_e, w_mu, p4_mu, p4_e
-
-        elif alp.BR_tau_to_a_e() > 0 and alp.BR_tau_to_a_mu() == 0:
-            self.p4_alp, self.weights = self.get_alp_events(alp, channel="e")
-
-        elif alp.BR_tau_to_a_e() == 0 and alp.BR_tau_to_a_mu() > 0:
-            self.p4_alp, self.weights = self.get_alp_events(alp, channel="mu")
-
-        # projected x,y at the plane of the detector
-        self.p_alp = np.sqrt(self.p4_alp[:, 0] ** 2 - alp.m_a**2)
-        self.x_alp = self.p4_alp[:, 1] / self.p_alp * self.L
-        self.y_alp = self.p4_alp[:, 2] / self.p_alp * self.L
-
-        # detector center at the plane of the detector
-        x0 = self.L * np.tan(self.theta0)
-        y0 = 0
-
-        if self.theta0 > 1e-2:
+        if hasattr(self, "theta0"):
             theta_alp = np.arccos(Cfv.get_cosTheta(self.p4_alp))
-            mask_alp_in_acc = (self.theta0 - self.dtheta / 2 < theta_alp) & (
+            self.mask_alp_in_acc = (self.theta0 - self.dtheta / 2 < theta_alp) & (
                 theta_alp < self.theta0 + self.dtheta / 2
             )
             signal_selection = self.p4_alp[:, 0] > self.Emin
@@ -246,31 +298,37 @@ class Experiment:
             # NOTE: Selection of events in a square
             # NOTE: Assume a cuboid... need to extend for SHiP
             if hasattr(self, "R"):
-                mask_alp_in_acc = (
-                    (self.x_alp - x0) ** 2 + (self.y_alp - y0) ** 2
+                self.mask_alp_in_acc = (
+                    (self.x_alp - self.x0) ** 2 + (self.y_alp - self.y0) ** 2
                 ) < self.R**2
             else:
-                mask_alp_in_acc = (np.abs(self.x_alp - x0) < self.dX / 2) & (
-                    np.abs(self.y_alp - y0) < self.dY / 2
+                self.mask_alp_in_acc = (np.abs(self.x_alp - self.x0) < self.dX / 2) & (
+                    np.abs(self.y_alp - self.y0) < self.dY / 2
                 )
             signal_selection = self.p4_alp[:, 0] > self.Emin
             self.eff = self.weights[signal_selection].sum() / self.weights.sum()
 
-        # If less than 5 generated events were within acceptance, dont even try to compute rate
-        if mask_alp_in_acc.sum() < 3:
-            p_bins = np.linspace(self.p_alp.min(), self.p_alp.max(), 40)
+        # If less than 3 generated events were within acceptance, dont even try to compute rate
+        if self.mask_alp_in_acc.sum() < 3:
+            if isinstance(bins, int):
+                p_bins = np.linspace(self.p_alp.min(), self.p_alp.max(), bins)
+            elif isinstance(bins, np.ndarray):
+                p_bins = bins
             self.geom_acceptance = 0
             return np.zeros(len(p_bins) - 1), p_bins
 
         # Else, histogram event rate in alp energy
         else:
-            p_bins = np.linspace(self.p_alp.min(), self.p_alp.max(), 40)
+            if isinstance(bins, int):
+                p_bins = np.linspace(self.p_alp.min(), self.p_alp.max(), bins)
+            elif isinstance(bins, np.ndarray):
+                p_bins = bins
 
             if selection:
                 h, p_bins = np.histogram(
-                    self.p_alp[mask_alp_in_acc],
+                    self.p_alp[self.mask_alp_in_acc],
                     bins=p_bins,
-                    weights=self.weights[mask_alp_in_acc],
+                    weights=self.weights[self.mask_alp_in_acc],
                 )
             else:
                 h, p_bins = np.histogram(
@@ -279,7 +337,7 @@ class Experiment:
                     weights=self.weights,
                 )
             self.geom_acceptance = (
-                self.weights[mask_alp_in_acc].sum() / self.weights.sum()
+                self.weights[self.mask_alp_in_acc].sum() / self.weights.sum()
             )
 
             return h / h.sum(), p_bins
@@ -299,7 +357,9 @@ class Experiment:
             else:
                 self.flux = alp.BR_tau_to_a_e() * self.norm
             return self.flux * np.sum(
-                self.dPhidp * alp.prob_decay(self.pc, self.L, self.dZ)
+                self.dPhidp
+                * alp.prob_decay(self.pc, self.L, self.dZ)
+                * alp.visible_BR(self.final_states)
             )
         else:
             self.flux = (
@@ -309,14 +369,22 @@ class Experiment:
                 * self.geom_acceptance
                 * self.eff
             )
-            return self.flux * alp.prob_decay(self.palp, self.L, self.dZ)
+            return (
+                self.flux
+                * alp.prob_decay(self.palp, self.L, self.dZ)
+                * alp.visible_BR(self.final_states)
+            )
 
     def reweight(self, alp1, alp2):
 
         new_rate = self.flux * (
             alp2.BR_tau_to_a_e()
             / alp1.BR_tau_to_a_e()
-            * np.sum(self.dPhidp * alp2.prob_decay(self.pc, self.L, self.dZ))
+            * np.sum(
+                self.dPhidp
+                * alp2.prob_decay(self.pc, self.L, self.dZ)
+                * alp2.visible_BR(self.final_states)
+            )
         )
         return new_rate
 

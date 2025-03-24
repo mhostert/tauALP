@@ -299,5 +299,23 @@ int main(int argc, char* argv[]) {
   // Statistics output
   // pythia.stat();
 
+  // Save the total cross section of proton-proton collisions
+  double totalCrossSection = pythia.info.sigmaGen();
+  std::cout << "Total cross section of proton-proton collisions: " << totalCrossSection << " mb" << std::endl;
+
+  // Calculate the cross section corresponding to the events that were saved
+  double savedEventsCrossSection = totalCrossSection * (static_cast<double>(generatedTauEvents) / pythia.info.nAccepted());
+  std::cout << "Cross section corresponding to saved events: " << savedEventsCrossSection << " mb" << std::endl;
+
+  // Optionally, save these values to a file
+  std::ofstream crossSectionFile("cross_section_info.txt");
+  if (crossSectionFile.is_open()) {
+      crossSectionFile << "Total cross section of proton-proton collisions: " << totalCrossSection << " mb" << std::endl;
+      crossSectionFile << "Cross section corresponding to saved events: " << savedEventsCrossSection << " mb" << std::endl;
+      crossSectionFile.close();
+  } else {
+      std::cerr << "Error: Could not open file to save cross section information." << std::endl;
+  }
+
   return 0;
 }

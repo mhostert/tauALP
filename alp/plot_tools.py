@@ -12,8 +12,13 @@ import matplotlib.tri as tri
 from scipy.spatial.distance import pdist, squareform
 from matplotlib import colors as mpl_colors
 from matplotlib.collections import PatchCollection
+from scipy.interpolate import splprep, splev
 
 import scipy
+
+from DarkNews import const
+from alp.models import ALP
+
 
 ###########################
 # Matheus
@@ -46,6 +51,18 @@ PLOT_FAMILY = False
 PATH_PLOTS = "plots/event_rates/"
 
 PAPER_TAG = r"HKZ\,2024"
+
+CB_color_cycle = [
+    "#377eb8",
+    "#ff7f00",
+    "#4daf4a",
+    "#f781bf",
+    "#a65628",
+    "#984ea3",
+    "#999999",
+    "#e41a1c",
+    "#dede00",
+]
 
 
 ##########################
@@ -237,6 +254,40 @@ def nearest_neighbor_path(points):
     # Return the ordered path indices and the corresponding points
     ordered_points = points[path]
     return ordered_points
+
+
+def plot_closed_region(points, logx=False, logy=False):
+    x, y = points
+    if logy:
+        if (y == 0).any():
+            raise ValueError("y values cannot contain any zeros in log mode.")
+        sy = np.sign(y)
+        ssy = (np.abs(y) < 1) * (-1) + (np.abs(y) > 1) * (1)
+        y = ssy * np.log(y * sy)
+    if logx:
+        if (x == 0).any():
+            raise ValueError("x values cannot contain any zeros in log mode.")
+        sx = np.sign(x)
+        ssx = (x < 1) * (-1) + (x > 1) * (1)
+        x = ssx * np.log(x * sx)
+
+    points = np.array([x, y]).T
+
+    points_s = points - points.mean(0)
+    angles = np.angle((points_s[:, 0] + 1j * points_s[:, 1]))
+    points_sort = points_s[angles.argsort()]
+    points_sort += points.mean(0)
+
+    tck, u = splprep(points_sort.T, u=None, s=0.0, per=0, k=1)
+    u_new = np.linspace(u.min(), u.max(), len(points[:, 0]))
+    x_new, y_new = splev(u_new, tck, der=0)
+
+    if logx:
+        x_new = sx * np.exp(ssx * x_new)
+    if logy:
+        y_new = sy * np.exp(ssy * y_new)
+
+    return x_new, y_new
 
 
 def get_ordered_closed_region(points, logx=False, logy=False):
@@ -480,3 +531,518 @@ class MulticolorPatchHandler(object):
 
         handlebox.add_artist(patch)
         return patch
+
+
+def plot_other_limits_Bvis(
+    ax, ma_fixed, Bvis_range=[1e-12, 1], c_lepton=None, c_NN=0, mN=0, linewidth=0.25
+):
+
+    # BaBar Limit
+    ma, qsi = np.genfromtxt("data/digitized/BABAR_leptophilic.dat", unpack=True)
+    ax.fill_between(
+        ma,
+        (1 + (ma < const.m_tau - const.m_mu) * 1e100) * qsi / const.vev_EW,
+        qsi / qsi,
+        label="BABAR",
+        color="lightgrey",
+        linestyle="-",
+    )
+    ax.plot(
+        ma,
+        (1 + (ma < const.m_tau - const.m_mu) * 1e100) * qsi / const.vev_EW,
+        label="BABAR",
+        color="black",
+        linestyle="-",
+        lw=linewidth,
+    )
+
+    Bvis = np.geomspace(Bvis_range[0], Bvis_range[1], 1000)
+    inv_fa = np.geomspace(1e-9, 1e-2, 1000, endpoint=True)
+    BVIS, INV_FA = np.meshgrid(Bvis, inv_fa)
+
+    alps = ALP(ma_fixed, 1 / INV_FA, c_lepton=c_lepton, c_NN=c_NN, mN=mN, Bvis=BVIS)
+    ################################################################
+    # Belle-II (Tau -> mu alp)
+    ma_limit, B_limit_90CL = np.genfromtxt(
+        "data/digitized/BelleII_tau_to_mu_a.dat", unpack=True
+    )
+    B_limit_90CL_interp = np.interp(
+        ma_fixed, ma_limit, B_limit_90CL, left=1e100, right=1e100
+    )
+
+    p_alp_avg = 10.58 / 4
+    P_decay = alps.prob_decay(p_alp_avg, 300, 100e100)  # 3 m travel
+
+    BR_tau_mu_a = 1 / B_limit_90CL_interp * P_decay * alps.BR_tau_to_a_mu()
+    c = ax.contourf(
+        BVIS, INV_FA, BR_tau_mu_a, levels=[1, 1e100], colors=["grey"], alpha=1, zorder=0
+    )
+    c = ax.contour(
+        BVIS,
+        INV_FA,
+        BR_tau_mu_a,
+        levels=[1],
+        colors=["black"],
+        linestyles="-",
+        linewidths=[linewidth],
+        alpha=1,
+        zorder=2,
+    )
+
+    # x_vis = []
+    # y_vis = []
+    # x_vis.append([c.collections[0].get_paths()[0].vertices[:,0]])
+    # y_vis.append([c.collections[0].get_paths()[0].vertices[:,1]])
+
+    ################################################################
+    # Belle-II (Tau -> e alp)
+    ma_limit, B_limit_90CL = np.genfromtxt(
+        "data/digitized/BelleII_tau_to_e_a.dat", unpack=True
+    )
+    B_limit_90CL_interp = np.interp(
+        ma_fixed, ma_limit, B_limit_90CL, left=1e100, right=1e100
+    )
+
+    p_alp_avg = 10.58 / 4
+    P_decay = alps.prob_decay(p_alp_avg, 300, 100e100)  # 3 m travel
+
+    BR_tau_e_a = 1 / B_limit_90CL_interp * P_decay * alps.BR_tau_to_a_e()
+    c = ax.contourf(
+        BVIS,
+        INV_FA,
+        BR_tau_e_a,
+        levels=[1, 1e100],
+        colors=["lightgrey"],
+        alpha=1,
+        zorder=0,
+    )
+    c = ax.contour(
+        BVIS,
+        INV_FA,
+        BR_tau_e_a,
+        levels=[1],
+        colors=["black"],
+        linestyles="-",
+        linewidths=[linewidth],
+        alpha=1,
+        zorder=2,
+    )
+
+    BR_tau_ell_a = alps.BR_tau_to_a_e() + alps.BR_tau_to_a_mu()
+    c = ax.contourf(
+        BVIS,
+        INV_FA,
+        BR_tau_ell_a,
+        levels=[1e-2, 1e100],
+        colors=["grey"],
+        alpha=1,
+        zorder=0.2,
+    )
+    c = ax.contour(
+        BVIS,
+        INV_FA,
+        BR_tau_ell_a,
+        levels=[1e-2],
+        colors=["black"],
+        linestyles="-",
+        linewidths=[linewidth],
+        alpha=1,
+        zorder=2,
+    )
+
+    ################################################################
+    # Belle (Tau- -> e- (alp -> mu+ mu-)) + (Tau- -> mu- (alp -> mu+ e-))
+    p_alp_avg = 10.58 / 4
+    P_decay = alps.prob_decay(p_alp_avg, 0, 1)  # decays within 1 cm
+    B_limit_90CL = 2.7e-8
+    BR_tau_mu_a = (
+        1
+        / B_limit_90CL
+        * P_decay
+        * (
+            alps.BR_tau_to_a_e() * alps.BR_a_to_mm
+            + alps.BR_tau_to_a_mu() * alps.BR_a_to_me
+        )
+    )
+    c = ax.contourf(
+        BVIS,
+        INV_FA,
+        BR_tau_mu_a,
+        levels=[1, 1e100],
+        colors=["lightgrey"],
+        alpha=1,
+        zorder=0,
+    )
+    c = ax.contour(
+        BVIS,
+        INV_FA,
+        BR_tau_mu_a,
+        levels=[1],
+        colors=["black"],
+        linestyles="-",
+        linewidths=[linewidth],
+        alpha=1,
+        zorder=2,
+    )
+
+    ################################################################
+    # Belle (Tau- -> mu- (alp -> mu+ mu-))
+    p_alp_avg = 10.58 / 4
+    P_decay = alps.prob_decay(p_alp_avg, 0, 1)  # decays within 1 cm
+    B_limit_90CL = 2.1e-8
+    BR_tau_mu_a = 1 / B_limit_90CL * P_decay * alps.BR_tau_to_a_mu() * alps.BR_a_to_mm
+    c = ax.contourf(
+        BVIS,
+        INV_FA,
+        BR_tau_mu_a,
+        levels=[1, 1e100],
+        colors=["lightgrey"],
+        alpha=1,
+        zorder=0,
+    )
+    c = ax.contour(
+        BVIS,
+        INV_FA,
+        BR_tau_mu_a,
+        levels=[1],
+        colors=["black"],
+        linestyles="-",
+        linewidths=[linewidth],
+        alpha=1,
+        zorder=2,
+    )
+
+    ################################################################
+    # Belle (Tau- -> mu- (alp -> mu+ e-))
+    p_alp_avg = 10.58 / 4
+    P_decay = alps.prob_decay(p_alp_avg, 0, 1)  # decays within 1 cm
+    B_limit_90CL = 2.7e-8
+    BR_tau_mu_a = 1 / B_limit_90CL * P_decay * alps.BR_tau_to_a_mu() * alps.BR_a_to_me
+    c = ax.contourf(
+        BVIS,
+        INV_FA,
+        BR_tau_mu_a,
+        levels=[1, 1e100],
+        colors=["lightgrey"],
+        alpha=1,
+        zorder=0,
+    )
+    c = ax.contour(
+        BVIS,
+        INV_FA,
+        BR_tau_mu_a,
+        levels=[1],
+        colors=["black"],
+        linestyles="-",
+        linewidths=[linewidth],
+        alpha=1,
+        zorder=2,
+    )
+
+    # Belle (Tau- -> mu- (alp -> mu- e+))
+    p_alp_avg = 10.58 / 4
+    P_decay = alps.prob_decay(p_alp_avg, 0, 1)  # decays within 1 cm
+    B_limit_90CL = 1.7e-8
+    BR_tau_mu_a = 1 / B_limit_90CL * P_decay * alps.BR_tau_to_a_mu() * alps.BR_a_to_em
+    c = ax.contourf(
+        BVIS,
+        INV_FA,
+        BR_tau_mu_a,
+        levels=[1, 1e100],
+        colors=["lightgrey"],
+        alpha=1,
+        zorder=0,
+    )
+    c = ax.contour(
+        BVIS,
+        INV_FA,
+        BR_tau_mu_a,
+        levels=[1],
+        colors=["black"],
+        linestyles="-",
+        linewidths=[linewidth],
+        alpha=1,
+        zorder=2,
+    )
+
+    ################################################################
+    # Belle (Tau- -> e- (alp -> mu+ e-))
+    p_alp_avg = 10.58 / 4
+    P_decay = alps.prob_decay(p_alp_avg, 0, 1)  # decays within 1 cm
+    B_limit_90CL = 1.5e-8
+    BR_tau_mu_a = 1 / B_limit_90CL * P_decay * alps.BR_tau_to_a_mu() * alps.BR_a_to_me
+    c = ax.contourf(
+        BVIS,
+        INV_FA,
+        BR_tau_mu_a,
+        levels=[1, 1e100],
+        colors=["lightgrey"],
+        alpha=1,
+        zorder=0,
+    )
+    c = ax.contour(
+        BVIS,
+        INV_FA,
+        BR_tau_mu_a,
+        levels=[1],
+        colors=["black"],
+        linestyles="-",
+        linewidths=[linewidth],
+        alpha=1,
+        zorder=2,
+    )
+
+
+def plot_other_limits(ax, c_lepton=None, c_NN=0, mN=0, linewidth=0.25):
+
+    # BaBar Limit
+    ma, qsi = np.genfromtxt("data/digitized/BABAR_leptophilic.dat", unpack=True)
+    ax.fill_between(
+        ma,
+        (1 + (ma < const.m_tau - const.m_mu) * 1e100) * qsi / const.vev_EW,
+        qsi / qsi,
+        label="BABAR",
+        color="lightgrey",
+        linestyle="-",
+    )
+    ax.plot(
+        ma,
+        (1 + (ma < const.m_tau - const.m_mu) * 1e100) * qsi / const.vev_EW,
+        label="BABAR",
+        color="black",
+        linestyle="-",
+        lw=linewidth,
+    )
+
+    ma = np.geomspace(1e-3, 3, 1000)
+    inv_fa = np.geomspace(1e-9, 1e-2, 1000, endpoint=True)
+    MA, INV_FA = np.meshgrid(ma, inv_fa)
+
+    alps = ALP(MA, 1 / INV_FA, c_lepton=c_lepton, c_NN=c_NN, mN=mN, Bvis=1)
+    ################################################################
+    # Belle-II (Tau -> mu alp)
+    ma_limit, B_limit_90CL = np.genfromtxt(
+        "data/digitized/BelleII_tau_to_mu_a.dat", unpack=True
+    )
+    B_limit_90CL_interp = np.interp(MA, ma_limit, B_limit_90CL, left=1e100, right=1e100)
+
+    p_alp_avg = 10.58 / 4
+    P_decay = alps.prob_decay(p_alp_avg, 300, 100e100)  # 3 m travel
+
+    BR_tau_mu_a = 1 / B_limit_90CL_interp * P_decay * alps.BR_tau_to_a_mu()
+    c = ax.contourf(
+        MA,
+        INV_FA,
+        BR_tau_mu_a,
+        levels=[1, 1e100],
+        colors=["lightgrey"],
+        alpha=1,
+        zorder=0.2,
+    )
+    c = ax.contour(
+        MA,
+        INV_FA,
+        BR_tau_mu_a,
+        levels=[1],
+        colors=["black"],
+        linestyles="-",
+        linewidths=[linewidth],
+        alpha=1,
+        zorder=2,
+    )
+
+    BR_tau_ell_a = alps.BR_tau_to_a_e() + alps.BR_tau_to_a_mu()
+    c = ax.contourf(
+        MA,
+        INV_FA,
+        BR_tau_ell_a,
+        levels=[1e-2, 1e100],
+        colors=["grey"],
+        alpha=1,
+        zorder=0.5,
+    )
+    c = ax.contour(
+        MA,
+        INV_FA,
+        BR_tau_ell_a,
+        levels=[1e-2],
+        colors=["black"],
+        linestyles="-",
+        linewidths=[linewidth],
+        alpha=1,
+        zorder=2,
+    )
+
+    ################################################################
+    # Belle-II (Tau -> e alp)
+    ma_limit, B_limit_90CL = np.genfromtxt(
+        "data/digitized/BelleII_tau_to_e_a.dat", unpack=True
+    )
+    B_limit_90CL_interp = np.interp(MA, ma_limit, B_limit_90CL, left=1e100, right=1e100)
+
+    p_alp_avg = 10.58 / 4
+    P_decay = alps.prob_decay(p_alp_avg, 300, 100e100)  # 3 m travel
+
+    BR_tau_e_a = 1 / B_limit_90CL_interp * P_decay * alps.BR_tau_to_a_e()
+    c = ax.contourf(
+        MA,
+        INV_FA,
+        BR_tau_e_a,
+        levels=[1, 1e100],
+        colors=["lightgrey"],
+        alpha=1,
+        zorder=0.2,
+    )
+    c = ax.contour(
+        MA,
+        INV_FA,
+        BR_tau_e_a,
+        levels=[1],
+        colors=["black"],
+        linestyles="-",
+        linewidths=[linewidth],
+        alpha=1,
+        zorder=2,
+    )
+
+    ################################################################
+    # Belle (Tau- -> e- (alp -> mu+ mu-)) + (Tau- -> mu- (alp -> mu+ e-))
+    p_alp_avg = 10.58 / 4
+    P_decay = alps.prob_decay(p_alp_avg, 0, 1)  # decays within 1 cm
+    B_limit_90CL = 2.7e-8
+    BR_tau_mu_a = (
+        1
+        / B_limit_90CL
+        * P_decay
+        * (
+            alps.BR_tau_to_a_e() * alps.BR_a_to_mm
+            + alps.BR_tau_to_a_mu() * alps.BR_a_to_me
+        )
+    )
+    c = ax.contourf(
+        MA,
+        INV_FA,
+        BR_tau_mu_a,
+        levels=[1, 1e100],
+        colors=["lightgrey"],
+        alpha=1,
+        zorder=0,
+    )
+    c = ax.contour(
+        MA,
+        INV_FA,
+        BR_tau_mu_a,
+        levels=[1],
+        colors=["black"],
+        linestyles="-",
+        linewidths=[linewidth],
+        alpha=1,
+        zorder=2,
+    )
+
+    ################################################################
+    # Belle (Tau- -> mu- (alp -> mu+ mu-))
+    p_alp_avg = 10.58 / 4
+    P_decay = alps.prob_decay(p_alp_avg, 0, 1)  # decays within 1 cm
+    B_limit_90CL = 2.1e-8
+    BR_tau_mu_a = 1 / B_limit_90CL * P_decay * alps.BR_tau_to_a_mu() * alps.BR_a_to_mm
+    c = ax.contourf(
+        MA,
+        INV_FA,
+        BR_tau_mu_a,
+        levels=[1, 1e100],
+        colors=["lightgrey"],
+        alpha=1,
+        zorder=0,
+    )
+    c = ax.contour(
+        MA,
+        INV_FA,
+        BR_tau_mu_a,
+        levels=[1],
+        colors=["black"],
+        linestyles="-",
+        linewidths=[linewidth],
+        alpha=1,
+        zorder=2,
+    )
+
+    ################################################################
+    # Belle (Tau- -> mu- (alp -> mu+ e-))
+    p_alp_avg = 10.58 / 4
+    P_decay = alps.prob_decay(p_alp_avg, 0, 1)  # decays within 1 cm
+    B_limit_90CL = 2.7e-8
+    BR_tau_mu_a = 1 / B_limit_90CL * P_decay * alps.BR_tau_to_a_mu() * alps.BR_a_to_me
+    c = ax.contourf(
+        MA,
+        INV_FA,
+        BR_tau_mu_a,
+        levels=[1, 1e100],
+        colors=["lightgrey"],
+        alpha=1,
+        zorder=0,
+    )
+    c = ax.contour(
+        MA,
+        INV_FA,
+        BR_tau_mu_a,
+        levels=[1],
+        colors=["black"],
+        linestyles="-",
+        linewidths=[linewidth],
+        alpha=1,
+        zorder=2,
+    )
+
+    # Belle (Tau- -> mu- (alp -> mu- e+))
+    p_alp_avg = 10.58 / 4
+    P_decay = alps.prob_decay(p_alp_avg, 0, 1)  # decays within 1 cm
+    B_limit_90CL = 1.7e-8
+    BR_tau_mu_a = 1 / B_limit_90CL * P_decay * alps.BR_tau_to_a_mu() * alps.BR_a_to_em
+    c = ax.contourf(
+        MA,
+        INV_FA,
+        BR_tau_mu_a,
+        levels=[1, 1e100],
+        colors=["lightgrey"],
+        alpha=1,
+        zorder=0,
+    )
+    c = ax.contour(
+        MA,
+        INV_FA,
+        BR_tau_mu_a,
+        levels=[1],
+        colors=["black"],
+        linestyles="-",
+        linewidths=[linewidth],
+        alpha=1,
+        zorder=2,
+    )
+
+    ################################################################
+    # Belle (Tau- -> e- (alp -> mu+ e-))
+    p_alp_avg = 10.58 / 4
+    P_decay = alps.prob_decay(p_alp_avg, 0, 1)  # decays within 1 cm
+    B_limit_90CL = 1.5e-8
+    BR_tau_mu_a = 1 / B_limit_90CL * P_decay * alps.BR_tau_to_a_mu() * alps.BR_a_to_me
+    c = ax.contourf(
+        MA,
+        INV_FA,
+        BR_tau_mu_a,
+        levels=[1, 1e100],
+        colors=["lightgrey"],
+        alpha=1,
+        zorder=0,
+    )
+    c = ax.contour(
+        MA,
+        INV_FA,
+        BR_tau_mu_a,
+        levels=[1],
+        colors=["black"],
+        linestyles="-",
+        linewidths=[linewidth],
+        alpha=1,
+        zorder=2,
+    )

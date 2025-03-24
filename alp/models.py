@@ -127,10 +127,14 @@ class ALP:
         m_a,
         f_a,
         c_gg=0,
+        c_NN=0,
+        mN=0,
+        Bvis=1,
         c_lepton=None,
     ):
         self.f_a = f_a
         self.m_a = m_a
+        self.mN = mN
         self.Lambda_NP = 4 * np.pi * self.f_a
 
         # NOTE: democratic couplings
@@ -141,30 +145,88 @@ class ALP:
 
         self.c_gg = c_gg  # + self.c_gg_eff()
         self.c_BB = self.c_lepton.diagonal().sum() / 2
-
         # NOTE: Check the factor of 1/2
         self.c_WW = -(self.c_lepton.diagonal().sum()) / 2
 
-        self.Gamma_a = (
+        # Heavy neutrino couplings
+        self.c_NN = c_NN
+
+        # Visible decay widths
+        self.Gamma_a_vis = (
             self.Gamma_a_to_ee()
             + self.Gamma_a_to_me()
             + self.Gamma_a_to_em()
             + self.Gamma_a_to_mm()
             + self.Gamma_a_to_gg()
+            + self.Gamma_a_to_NN()
         )
+        # Invisible decay width
+        self.Bvis = Bvis
+        self.Binv = 1 - self.Bvis
+        self.Gamma_a_inv = self.Gamma_a_vis * (1 - self.Bvis) / self.Bvis
+        self.Gamma_a = self.Gamma_a_vis + self.Gamma_a_inv
 
         # Channels are labeled as a -> l+ l-
-        self.BR_a_to_ee = self.Gamma_a_to_ee() / self.Gamma_a
-        self.BR_a_to_me = self.Gamma_a_to_me() / self.Gamma_a
-        self.BR_a_to_em = self.Gamma_a_to_em() / self.Gamma_a
-        self.BR_a_to_mm = self.Gamma_a_to_mm() / self.Gamma_a
-        self.BR_a_to_gg = self.Gamma_a_to_gg() / self.Gamma_a
+
+        if len(np.array([self.Gamma_a])) > 1:
+            self.BR_a_to_ee = np.empty_like(self.Gamma_a)
+            self.BR_a_to_me = np.empty_like(self.Gamma_a)
+            self.BR_a_to_me = np.empty_like(self.Gamma_a)
+            self.BR_a_to_em = np.empty_like(self.Gamma_a)
+            self.BR_a_to_mm = np.empty_like(self.Gamma_a)
+            self.BR_a_to_gg = np.empty_like(self.Gamma_a)
+            self.BR_a_to_NN = np.empty_like(self.Gamma_a)
+            self.BR_a_to_inv = np.empty_like(self.Gamma_a)
+
+            self.BR_a_to_ee[self.Gamma_a > 0] = (
+                self.Gamma_a_to_ee()[self.Gamma_a > 0] / self.Gamma_a[self.Gamma_a > 0]
+            )
+            self.BR_a_to_ee[self.Gamma_a <= 0] = 0
+            self.BR_a_to_me[self.Gamma_a > 0] = (
+                self.Gamma_a_to_me()[self.Gamma_a > 0] / self.Gamma_a[self.Gamma_a > 0]
+            )
+            self.BR_a_to_me[self.Gamma_a <= 0] = 0
+            self.BR_a_to_em[self.Gamma_a > 0] = (
+                self.Gamma_a_to_em()[self.Gamma_a > 0] / self.Gamma_a[self.Gamma_a > 0]
+            )
+            self.BR_a_to_em[self.Gamma_a <= 0] = 0
+            self.BR_a_to_mm[self.Gamma_a > 0] = (
+                self.Gamma_a_to_mm()[self.Gamma_a > 0] / self.Gamma_a[self.Gamma_a > 0]
+            )
+            self.BR_a_to_mm[self.Gamma_a <= 0] = 0
+            self.BR_a_to_gg[self.Gamma_a > 0] = (
+                self.Gamma_a_to_gg()[self.Gamma_a > 0] / self.Gamma_a[self.Gamma_a > 0]
+            )
+            self.BR_a_to_gg[self.Gamma_a <= 0] = 0
+            self.BR_a_to_NN[self.Gamma_a > 0] = (
+                self.Gamma_a_to_NN()[self.Gamma_a > 0] / self.Gamma_a[self.Gamma_a > 0]
+            )
+            self.BR_a_to_NN[self.Gamma_a <= 0] = 0
+
+            self.BR_a_to_inv[self.Gamma_a > 0] = (
+                self.Gamma_a_inv[self.Gamma_a > 0] / self.Gamma_a[self.Gamma_a > 0]
+            )
+            self.BR_a_to_inv[self.Gamma_a > 0] = 0
+
+        else:
+            self.BR_a_to_ee = self.Gamma_a_to_ee() / self.Gamma_a * (self.Gamma_a > 0)
+            self.BR_a_to_me = self.Gamma_a_to_me() / self.Gamma_a * (self.Gamma_a > 0)
+            self.BR_a_to_em = self.Gamma_a_to_em() / self.Gamma_a * (self.Gamma_a > 0)
+            self.BR_a_to_mm = self.Gamma_a_to_mm() / self.Gamma_a * (self.Gamma_a > 0)
+            self.BR_a_to_gg = self.Gamma_a_to_gg() / self.Gamma_a * (self.Gamma_a > 0)
+            self.BR_a_to_NN = self.Gamma_a_to_NN() / self.Gamma_a * (self.Gamma_a > 0)
+            self.BR_a_to_inv = self.Gamma_a_inv / self.Gamma_a * (self.Gamma_a > 0)
 
     def prob_decay(self, p_avg, L, dL):
         gamma = np.sqrt(p_avg**2 + self.m_a**2) / self.m_a
         beta = np.sqrt(1 - 1 / gamma**2)
         ell_dec = const.get_decay_rate_in_cm(self.Gamma_a) * gamma * beta
-        return np.exp(-L / ell_dec) * (1 - np.exp(-dL / ell_dec))
+        p = np.empty_like(ell_dec)
+        p[ell_dec > 0] = np.exp(-L / ell_dec[ell_dec > 0]) * (
+            1 - np.exp(-dL / ell_dec[ell_dec > 0])
+        )
+        p[ell_dec <= 0] = 0
+        return p
 
     def c_gg_eff(self):
         return (
@@ -198,7 +260,7 @@ class ALP:
         return self.c_lepton[1, 1] ** 2 * self.F_alp_2body(const.m_mu, const.m_mu)
 
     def Gamma_a_to_gg(self):
-        return 0
+        return 0 * self.m_a
         #     * self.c_gg**2
         #     * self.m_a**3
         #     * const.alphaQED**2
@@ -206,6 +268,9 @@ class ALP:
         #     / np.pi**3
         #     / self.f_a**2
         # )
+
+    def Gamma_a_to_NN(self):
+        return self.c_NN**2 * self.F_alp_2body(self.mN, self.mN)
 
     def BR_tau_to_a_mu(self):
         return (
@@ -239,3 +304,15 @@ class ALP:
             * F_lepton_2body(const.m_mu, self.m_a, const.m_e)
             / Gamma_mu
         )
+
+    def visible_BR(self, final_states):
+        return (
+            self.BR_a_to_ee * ("ee" in final_states)
+            + self.BR_a_to_em * ("em" in final_states)
+            + self.BR_a_to_mm * ("mm" in final_states)
+            + self.BR_a_to_me * ("me" in final_states)
+        )
+
+    # def rest_frame_3body_tau_to_pi_nu_a(self, nevents):
+
+    #     m23_max =

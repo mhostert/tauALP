@@ -46,11 +46,11 @@ int main(int argc, char* argv[]) {
   
   
   // Beam settings for one beam at rest and the other at 120 GeV
-  pythia.readString("Beams:idA = 2212"); // proton
-  pythia.readString("Beams:idB = 2212"); // proton
-  // pythia.readString("Beams:eA = "+Eproton_beam); // proton beam energy
-  // pythia.readString("Beams:eB = 0.0");   // proton at rest
-  // pythia.readString("Beams:frameType = 2"); // fixed target
+  // pythia.readString("Beams:idA = 2212"); // proton
+  // pythia.readString("Beams:idB = 2212"); // proton
+  pythia.readString("Beams:eA = "+Eproton_beam); // proton beam energy
+  pythia.readString("Beams:eB = 0.0");   // proton at rest
+  pythia.readString("Beams:frameType = 2"); // fixed target
 
   // Set the minimum pT for hard QCD (perturbative) processes (formally divergent...)
   pythia.readString("PhaseSpace:pTHatMin = 0.01");

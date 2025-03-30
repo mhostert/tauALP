@@ -12,6 +12,28 @@ Gamma_mu = const.get_decay_rate_in_s(2.196e-6)  # GeV is the width of the Muon l
 # )
 
 
+def v_2body(m_parent, m_a, m_l):
+    mask = m_parent > m_l + m_a
+    if isinstance(m_a, np.ndarray):
+        v = np.zeros_like(m_a)
+        v[mask] = np.sqrt(
+            1
+            - (2 * (m_l**2 + m_a[mask] ** 2) / m_parent**2)
+            + ((m_l**2 - m_a[mask] ** 2) ** 2 / m_parent**4)
+        )
+    else:
+        if m_parent > m_l + m_a:
+            v = np.sqrt(
+                1
+                - (2 * (m_l**2 + m_a**2) / m_parent**2)
+                + ((m_l**2 - m_a**2) ** 2 / m_parent**4)
+            )
+        else:
+            v = 0
+
+    return v
+
+
 def F_lepton_2body(m_parent, m_a, m_l):
     """Phase space function for l2 --> a l1
 
@@ -23,13 +45,9 @@ def F_lepton_2body(m_parent, m_a, m_l):
     """
     term1 = (1 + m_l / m_parent) ** 2
     term2 = (1 - m_l / m_parent) ** 2 - (m_a**2 / m_parent**2)
-    term3 = np.sqrt(
-        1
-        - (2 * (m_l**2 + m_a**2) / m_parent**2)
-        + ((m_l**2 - m_a**2) ** 2 / m_parent**4)
-    )
+    term3 = v_2body(m_parent, m_a, m_l)
 
-    return np.where(m_parent > m_l + m_a, term1 * term2 * term3, 0)
+    return term1 * term2 * term3
 
 
 def g1_analytic(r):
@@ -217,8 +235,34 @@ class ALP:
             self.BR_a_to_NN = self.Gamma_a_to_NN() / self.Gamma_a * (self.Gamma_a > 0)
             self.BR_a_to_inv = self.Gamma_a_inv / self.Gamma_a * (self.Gamma_a > 0)
 
-    def prob_decay(self, p_avg, L, dL):
-        gamma = np.sqrt(p_avg**2 + self.m_a**2) / self.m_a
+        self.Ea_min = {
+            "tau>nu+rho+a": self.m_a,
+            "tau>nu+pi+a": self.m_a,
+            "tau>nu+nu+e+a": self.m_a,
+            "tau>nu+nu+mu+a": self.m_a,
+            "tau>e+a": (const.m_tau**2 + self.m_a**2 - const.m_e**2) / 2 / const.m_tau,
+            "tau>mu+a": (const.m_tau**2 + self.m_a**2 - const.m_mu**2)
+            / 2
+            / const.m_tau,
+        }
+
+        self.Ea_max = {
+            "tau>nu+rho+a": (const.m_tau**2 + self.m_a**2 - const.m_charged_rho**2)
+            / 2
+            / const.m_tau,
+            "tau>nu+pi+a": (const.m_tau**2 + self.m_a**2 - const.m_charged_pion**2)
+            / 2
+            / const.m_tau,
+            "tau>nu+nu+e+a": const.m_tau,
+            "tau>nu+nu+mu+a": const.m_tau,
+            "tau>e+a": (const.m_tau**2 + self.m_a**2 - const.m_e**2) / 2 / const.m_tau,
+            "tau>mu+a": (const.m_tau**2 + self.m_a**2 - const.m_mu**2)
+            / 2
+            / const.m_tau,
+        }
+
+    def prob_decay(self, Ea, L, dL):
+        gamma = Ea / self.m_a
         beta = np.sqrt(1 - 1 / gamma**2)
         ell_dec = const.get_decay_rate_in_cm(self.Gamma_a) * gamma * beta
         p = np.empty_like(ell_dec)
@@ -239,13 +283,34 @@ class ALP:
         """two body phase space of alp decays"""
         term1 = self.m_a * (m_l1 + m_l2) ** 2 / 32 / np.pi / self.f_a**2
         term2 = 1 - (m_l1 - m_l2) ** 2 / self.m_a**2
-        term3 = (
-            1
-            - 2 * (m_l1**2 + m_l2**2) / self.m_a**2
-            + (m_l1**2 - m_l2**2) ** 2 / self.m_a**4
-        ) ** 0.5
 
-        return np.where(self.m_a > m_l1 + m_l2, term1 * term2 * term3, 0.0).real
+        if isinstance(self.m_a, np.ndarray):
+            Gamma = np.zeros_like(self.m_a)
+
+            Gamma[self.m_a > m_l1 + m_l2] = (
+                np.sqrt(
+                    1
+                    - 2 * (m_l1**2 + m_l2**2) / self.m_a[self.m_a > m_l1 + m_l2] ** 2
+                    + (m_l1**2 - m_l2**2) ** 2 / self.m_a[self.m_a > m_l1 + m_l2] ** 4
+                )
+                * term1[self.m_a > m_l1 + m_l2]
+                * term2[self.m_a > m_l1 + m_l2]
+            )
+        else:
+            if self.m_a > m_l1 + m_l2:
+                Gamma = (
+                    np.sqrt(
+                        1
+                        - 2 * (m_l1**2 + m_l2**2) / self.m_a**2
+                        + (m_l1**2 - m_l2**2) ** 2 / self.m_a**4
+                    )
+                    * term1
+                    * term2
+                )
+            else:
+                Gamma = 0
+
+        return Gamma
 
     def Gamma_a_to_ee(self):
         return self.c_lepton[0, 0] ** 2 * self.F_alp_2body(const.m_e, const.m_e)
@@ -271,6 +336,31 @@ class ALP:
 
     def Gamma_a_to_NN(self):
         return self.c_NN**2 * self.F_alp_2body(self.mN, self.mN)
+
+    def alp_visible_BR(self, final_states):
+        return (
+            self.BR_a_to_ee * ("ee" in final_states)
+            + self.BR_a_to_em * ("em" in final_states)
+            + self.BR_a_to_mm * ("mm" in final_states)
+            + self.BR_a_to_me * ("me" in final_states)
+        )
+
+    def tau_BR(self, production_channel):
+        """Branching ratio for tau -> a + l"""
+        if production_channel == "tau>e+a":
+            return self.BR_tau_to_a_e()
+        elif production_channel == "tau>mu+a":
+            return self.BR_tau_to_a_mu()
+        elif production_channel == "tau>nu+pi+a":
+            return self.BR_tau_to_pi_nu_a()
+        elif production_channel == "tau>nu+rho+a":
+            return self.BR_tau_to_rho_nu_a()
+        elif production_channel == "tau>nu+nu+e+a":
+            return self.BR_tau_to_e_nu_nu_a()
+        elif production_channel == "tau>nu+nu+mu+a":
+            return self.BR_tau_to_mu_nu_nu_a()
+        else:
+            raise ValueError("Unknown production channel")
 
     def BR_tau_to_a_mu(self):
         return (
@@ -305,14 +395,69 @@ class ALP:
             / Gamma_mu
         )
 
-    def visible_BR(self, final_states):
-        return (
-            self.BR_a_to_ee * ("ee" in final_states)
-            + self.BR_a_to_em * ("em" in final_states)
-            + self.BR_a_to_mm * ("mm" in final_states)
-            + self.BR_a_to_me * ("me" in final_states)
+    def BR_tau_to_pi_nu_a(self):
+        return self.c_lepton[2, 2] ** 2 * 1.5e-12 * (1e4 / self.f_a) ** 2
+
+    def BR_tau_to_rho_nu_a(self):
+        return self.c_lepton[2, 2] ** 2 * 2.3e-12 * (1e4 / self.f_a) ** 2
+
+    def BR_tau_to_e_nu_nu_a(self):
+        return self.c_lepton[2, 2] ** 2 * 1e-12 * (1e4 / self.f_a) ** 2
+
+    def diff_BR_tau_to_pi_nu_a(self, Ea):
+        """Differential decay rate for tau -> pi nu a"""
+
+        mtau_barSQR = const.m_tau**2 + self.m_a**2 - 2 * const.m_tau * Ea
+        dGammadE = (
+            self.c_lepton[2, 2] ** 2
+            * const.Gf**2
+            * const.m_tau**2
+            * const.fcharged_pion**2
+            * np.abs(const.Vud) ** 2
+            * (mtau_barSQR - const.m_charged_pion**2) ** 2
+            / 256
+            / np.pi**3
+            / self.f_a**2
+            / mtau_barSQR
+            * (
+                1
+                - self.m_a**2
+                * (const.m_tau**2 + mtau_barSQR)
+                / (const.m_tau**2 - mtau_barSQR) ** 2
+            )
+            * v_2body(const.m_tau, np.sqrt(mtau_barSQR), self.m_a)
         )
+        return (
+            dGammadE
+            * (Ea > self.Ea_min("tau>nu+pi+a"))
+            * (Ea < self.Ea_max("tau>nu+pi+a"))
+        ) / Gamma_tau
 
-    # def rest_frame_3body_tau_to_pi_nu_a(self, nevents):
-
-    #     m23_max =
+    def diff_BR_tau_to_rho_nu_a(self, Ea):
+        """Differential decay rate for tau -> rho nu a"""
+        mtau_barSQR = const.m_tau**2 + self.m_a**2 - 2 * const.m_tau * Ea
+        dGammadE = (
+            self.c_lepton[2, 2] ** 2
+            * const.Gf**2
+            * const.m_tau**2
+            * const.fcharged_rho**2
+            * np.abs(const.Vud) ** 2
+            * (mtau_barSQR + 2 * const.m_charged_rho**2)
+            * (1 - const.m_charged_rho**2 / mtau_barSQR) ** 2
+            / 256
+            / np.pi**3
+            / self.f_a**2
+            / mtau_barSQR
+            * (
+                1
+                - self.m_a**2
+                * (const.m_tau**2 + mtau_barSQR)
+                / (const.m_tau**2 - mtau_barSQR) ** 2
+            )
+            * v_2body(const.m_tau, np.sqrt(mtau_barSQR), self.m_a)
+        )
+        return (
+            dGammadE
+            * (Ea > self.Ea_min("tau>nu+rho+a"))
+            * (Ea < self.Ea_max("tau>nu+rho+a"))
+        ) / Gamma_tau

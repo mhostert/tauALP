@@ -544,7 +544,7 @@ def plot_other_limits_Bvis(
         (1 + (ma < const.m_tau - const.m_mu) * 1e100) * qsi / const.vev_EW,
         qsi / qsi,
         label="BABAR",
-        color="lightgrey",
+        color="silver",
         linestyle="-",
     )
     ax.plot(
@@ -575,7 +575,13 @@ def plot_other_limits_Bvis(
 
     BR_tau_mu_a = 1 / B_limit_90CL_interp * P_decay * alps.BR_tau_to_a_mu()
     c = ax.contourf(
-        BVIS, INV_FA, BR_tau_mu_a, levels=[1, 1e100], colors=["grey"], alpha=1, zorder=0
+        BVIS,
+        INV_FA,
+        BR_tau_mu_a,
+        levels=[1, 1e100],
+        colors=["silver"],
+        alpha=1,
+        zorder=0,
     )
     c = ax.contour(
         BVIS,
@@ -612,7 +618,7 @@ def plot_other_limits_Bvis(
         INV_FA,
         BR_tau_e_a,
         levels=[1, 1e100],
-        colors=["lightgrey"],
+        colors=["silver"],
         alpha=1,
         zorder=0,
     )
@@ -634,7 +640,7 @@ def plot_other_limits_Bvis(
         INV_FA,
         BR_tau_ell_a,
         levels=[1e-2, 1e100],
-        colors=["grey"],
+        colors=["silver"],
         alpha=1,
         zorder=0.2,
     )
@@ -669,7 +675,7 @@ def plot_other_limits_Bvis(
         INV_FA,
         BR_tau_mu_a,
         levels=[1, 1e100],
-        colors=["lightgrey"],
+        colors=["grey"],
         alpha=1,
         zorder=0,
     )
@@ -696,7 +702,7 @@ def plot_other_limits_Bvis(
         INV_FA,
         BR_tau_mu_a,
         levels=[1, 1e100],
-        colors=["lightgrey"],
+        colors=["grey"],
         alpha=1,
         zorder=0,
     )
@@ -723,7 +729,7 @@ def plot_other_limits_Bvis(
         INV_FA,
         BR_tau_mu_a,
         levels=[1, 1e100],
-        colors=["lightgrey"],
+        colors=["grey"],
         alpha=1,
         zorder=0,
     )
@@ -749,7 +755,7 @@ def plot_other_limits_Bvis(
         INV_FA,
         BR_tau_mu_a,
         levels=[1, 1e100],
-        colors=["lightgrey"],
+        colors=["grey"],
         alpha=1,
         zorder=0,
     )
@@ -776,7 +782,7 @@ def plot_other_limits_Bvis(
         INV_FA,
         BR_tau_mu_a,
         levels=[1, 1e100],
-        colors=["lightgrey"],
+        colors=["grey"],
         alpha=1,
         zorder=0,
     )
@@ -802,7 +808,7 @@ def plot_other_limits(ax, c_lepton=None, c_NN=0, mN=0, linewidth=0.25):
         (1 + (ma < const.m_tau - const.m_mu) * 1e100) * qsi / const.vev_EW,
         qsi / qsi,
         label="BABAR",
-        color="lightgrey",
+        color="silver",
         linestyle="-",
     )
     ax.plot(
@@ -835,7 +841,7 @@ def plot_other_limits(ax, c_lepton=None, c_NN=0, mN=0, linewidth=0.25):
         INV_FA,
         BR_tau_mu_a,
         levels=[1, 1e100],
-        colors=["lightgrey"],
+        colors=["silver"],
         alpha=1,
         zorder=0.2,
     )
@@ -857,7 +863,7 @@ def plot_other_limits(ax, c_lepton=None, c_NN=0, mN=0, linewidth=0.25):
         INV_FA,
         BR_tau_ell_a,
         levels=[1e-2, 1e100],
-        colors=["grey"],
+        colors=["silver"],
         alpha=1,
         zorder=0.5,
     )
@@ -889,7 +895,7 @@ def plot_other_limits(ax, c_lepton=None, c_NN=0, mN=0, linewidth=0.25):
         INV_FA,
         BR_tau_e_a,
         levels=[1, 1e100],
-        colors=["lightgrey"],
+        colors=["silver"],
         alpha=1,
         zorder=0.2,
     )
@@ -924,7 +930,7 @@ def plot_other_limits(ax, c_lepton=None, c_NN=0, mN=0, linewidth=0.25):
         INV_FA,
         BR_tau_mu_a,
         levels=[1, 1e100],
-        colors=["lightgrey"],
+        colors=["grey"],
         alpha=1,
         zorder=0,
     )
@@ -951,7 +957,7 @@ def plot_other_limits(ax, c_lepton=None, c_NN=0, mN=0, linewidth=0.25):
         INV_FA,
         BR_tau_mu_a,
         levels=[1, 1e100],
-        colors=["lightgrey"],
+        colors=["grey"],
         alpha=1,
         zorder=0,
     )
@@ -978,7 +984,7 @@ def plot_other_limits(ax, c_lepton=None, c_NN=0, mN=0, linewidth=0.25):
         INV_FA,
         BR_tau_mu_a,
         levels=[1, 1e100],
-        colors=["lightgrey"],
+        colors=["grey"],
         alpha=1,
         zorder=0,
     )
@@ -1004,7 +1010,7 @@ def plot_other_limits(ax, c_lepton=None, c_NN=0, mN=0, linewidth=0.25):
         INV_FA,
         BR_tau_mu_a,
         levels=[1, 1e100],
-        colors=["lightgrey"],
+        colors=["grey"],
         alpha=1,
         zorder=0,
     )
@@ -1031,7 +1037,7 @@ def plot_other_limits(ax, c_lepton=None, c_NN=0, mN=0, linewidth=0.25):
         INV_FA,
         BR_tau_mu_a,
         levels=[1, 1e100],
-        colors=["lightgrey"],
+        colors=["grey"],
         alpha=1,
         zorder=0,
     )

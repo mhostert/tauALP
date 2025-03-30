@@ -15,7 +15,7 @@ def run_simulation(num_events, base_filename, beam_energy):
         print(f"Completed: {base_filename} with {num_events} events")
 
 
-N_EVENTS = 100_000
+N_EVENTS = 500_000
 
 
 def main():

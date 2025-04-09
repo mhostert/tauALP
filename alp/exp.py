@@ -1,9 +1,10 @@
+import os
 import numpy as np
 import pandas as pd
-import numba
-from DarkNews import const
+
 from DarkNews import Cfourvec as Cfv
 
+from . import const
 from . import models
 
 
@@ -19,9 +20,9 @@ ICARUS_exp = {
     "dX": 2 * 2.67e2,
     "dY": 2.86e2,
     "dZ": 17.00e2,
-    "norm": NuMI_tau_per_POT * 4.2e21,
+    "norm": NuMI_tau_per_POT * 3e21,
     "Emin": 0.1,
-    "final_states": ["ee", "em", "me", "mm"],
+    "final_states": ["ee", "em", "me", "mm", "gg"],
 }
 MicroBooNE_exp = {
     "name": "MicroBooNE",
@@ -31,9 +32,9 @@ MicroBooNE_exp = {
     "dX": 2.26e2,
     "dY": 2.03e2,
     "dZ": 9.42e2,
-    "norm": NuMI_tau_per_POT * 4.2e21,
+    "norm": NuMI_tau_per_POT * 2e21,
     "Emin": 0.1,
-    "final_states": ["ee", "em", "me", "mm"],
+    "final_states": ["ee", "em", "me", "mm", "gg"],
 }
 NoVA_exp = {
     "name": "NOvA",
@@ -45,7 +46,69 @@ NoVA_exp = {
     "dZ": 12.7e2,
     "norm": NuMI_tau_per_POT * 4.2e21,
     "Emin": 0.1,
-    "final_states": ["ee", "em", "me", "mm"],
+    "final_states": ["ee", "em", "me", "mm", "gg"],
+}
+DUNE_exp = {
+    "name": "DUNE-ND",
+    "L": 574e2,
+    "x0": 0,
+    "y0": 0,
+    "dX": 5e2,
+    "dY": 5e2,
+    "dZ": 5.88e2,
+    "norm": NuMI_tau_per_POT * 10 * 1.1e21,
+    "Emin": 1,
+    "final_states": ["ee", "em", "me", "mm", "gg"],
+}
+
+TwoByTwo_exp = {
+    "name": "2x2 protoDUNE-ND",
+    "L": 1035e2,
+    "x0": 0,
+    "y0": 0,
+    "dX": 2 * 0.7e2,
+    "dY": 1.4e2,
+    "dZ": 2 * 0.7e2,
+    "norm": NuMI_tau_per_POT * 1e21 * 0.87,
+    "Emin": 0.1,
+    "final_states": ["ee", "em", "me", "mm", "gg"],
+}
+TwoByTwo_absorber_exp = {
+    "name": "2x2 protoDUNE-ND absorber",
+    "L": 1035e2 - 715e2,
+    "x0": 0,
+    "y0": 0,
+    "dX": 2 * 0.7e2,
+    "dY": 1.4e2,
+    "dZ": 2 * 0.7e2,
+    "norm": NuMI_tau_per_POT * 1e21 * 0.13,
+    "Emin": 0.1,
+    "final_states": ["ee", "em", "me", "mm", "gg"],
+}
+
+ArgoNeuT_exp = {
+    "name": "ArgoNeuT",
+    "L": 1033e2 - 63,
+    "x0": 0,
+    "y0": 0,
+    "dX": 0.40e2,
+    "dY": 0.47e2,
+    "dZ": 0.90e2 + 63,
+    "norm": NuMI_tau_per_POT * 1.25e20 * 0.5 * 0.87,  # for efficiency,
+    "Emin": 10,
+    "final_states": ["mm"],
+}
+ArgoNeuT_absorber_exp = {
+    "name": "ArgoNeuT_absorber",
+    "L": 1033e2 - 63 - 715e2,
+    "x0": 0,
+    "y0": 0,
+    "dX": 0.40e2,
+    "dY": 0.47e2,
+    "dZ": 0.90e2 + 63,
+    "norm": NuMI_tau_per_POT * 1.25e20 * 0.5 * 0.13,  # for efficiency,
+    "Emin": 10,
+    "final_states": ["mm"],
 }
 
 CHARM_exp = {
@@ -59,7 +122,7 @@ CHARM_exp = {
     "dZ": 35e2,
     "norm": SPS_tau_per_POT * 2.4e18,
     "Emin": 1,
-    "final_states": ["ee", "em", "me", "mm"],
+    "final_states": ["ee", "em", "me", "mm", "gg"],
 }
 BEBC_exp = {
     "name": "BEBC",
@@ -70,8 +133,8 @@ BEBC_exp = {
     "dY": 2.52e2,
     "dZ": 1.85e2,
     "norm": SPS_tau_per_POT * 2.72e18,
-    "Emin": 0 * 1,
-    "final_states": ["ee", "em", "me", "mm"],
+    "Emin": 1,
+    "final_states": ["ee", "em", "me", "mm", "gg"],
 }
 NA62_exp = {
     "name": "NA62",
@@ -95,7 +158,7 @@ PROTO_DUNE_NP02_exp = {
     "dZ": 6e2,
     "norm": SPS_tau_per_POT * 1.75e19,
     "Emin": 1,
-    "final_states": ["ee", "em", "me", "mm"],
+    "final_states": ["ee", "em", "me", "mm", "gg"],
 }
 PROTO_DUNE_NP04_exp = {
     "name": "ProtoDUNE-NP04",
@@ -107,7 +170,7 @@ PROTO_DUNE_NP04_exp = {
     "dZ": 6e2,
     "norm": SPS_tau_per_POT * 1.75e19,
     "Emin": 1,
-    "final_states": ["ee", "em", "me", "mm"],
+    "final_states": ["ee", "em", "me", "mm", "gg"],
 }
 SHiP_exp = {
     "name": "SHiP",
@@ -119,7 +182,7 @@ SHiP_exp = {
     "dZ": 49.6e2,
     "norm": SPS_tau_per_POT * 6e20,
     "Emin": 1,
-    "final_states": ["ee", "em", "me", "mm"],
+    "final_states": ["ee", "em", "me", "mm", "gg"],
 }
 
 sigma_tau = 25.95e-30  # cm^2
@@ -132,7 +195,7 @@ FASER_exp = {
     "dZ": 1.5e2,
     "norm": 150e39 * sigma_tau,
     "Emin": 100,
-    "final_states": ["ee", "em", "me", "mm"],
+    "final_states": ["ee", "em", "me", "mm", "gg"],
 }
 FASER2_exp = {
     "name": "FASER2",
@@ -143,20 +206,60 @@ FASER2_exp = {
     "dZ": 5e2,
     "norm": 3e42 * sigma_tau,
     "Emin": 100,
-    "final_states": ["ee", "em", "me", "mm"],
+    "final_states": ["ee", "em", "me", "mm", "gg"],
 }
 
 
-def load_events(file_paths):
-    # Initialize an empty DataFrame
-    df = pd.DataFrame()
-
-    # Iterate over each file path, read the CSV file, and concatenate it to the existing DataFrame
+def load_events(file_paths, as_dataframe=False, apply_BR_weights=True):
+    if not isinstance(file_paths, list):
+        file_paths = [file_paths]
+    # Check if the file paths exist
     for file_path in file_paths:
-        df_new = pd.read_csv(file_path, sep=" ").shift(axis=1).iloc[:, 1:]
-        df = pd.concat([df, df_new], ignore_index=True)
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"File not found: {file_path}")
 
-    return df
+    if as_dataframe:
+        # Initialize an empty DataFrame
+        df = pd.DataFrame()
+        particle_count = 0
+        event_count = 0
+        # Iterate over each file path, read the CSV file, and concatenate it to the existing DataFrame
+        for file_path in file_paths:
+            df_new = pd.read_csv(file_path, sep=" ").shift(axis=1).iloc[:, 1:]
+            if "tau_event_number" in df_new.columns:
+                df_new.rename(
+                    columns={"tau_event_number": "particle_count"}, inplace=True
+                )
+            this_event_count = df_new.event_number.max()
+            this_particle_count = df_new.particle_count.max()
+
+            df_new.event_number = df_new.event_number + event_count
+            df_new.particle_count = df_new.particle_count + particle_count
+            event_count += this_event_count
+            particle_count += this_particle_count
+            df = pd.concat([df, df_new], ignore_index=True)
+
+        if apply_BR_weights:
+            df["weights"] = np.zeros(len(df))
+
+            parents = [411, 431, 100443]
+            branchings = [1.20e-3, 5.36e-2, 3.1e-3]
+
+            for p, br in zip(parents, branchings):
+                mask = np.abs(df["mother_pid"]) == p
+                df.loc[mask, "weights"] = br
+        else:
+            df["weights"] = 1 / event_count
+
+        return df
+    else:
+        data = np.vstack(
+            [
+                np.loadtxt(file, skiprows=1, usecols=(1, 7, 8, 9, 10, 11))
+                for file in file_paths
+            ]
+        )
+        return data
 
 
 class Experiment:
@@ -175,7 +278,7 @@ class Experiment:
                     - dZ (float): Detector depth.
                     - norm (float): Normalization factor.
                     - Emin (float): Minimum energy threshold.
-                    - final_states (list): List of ALP decay final states (e.g., ["ee", "em", "me", "mm"]).
+                    - final_states (list): List of ALP decay final states (e.g., ["ee", "em", "me", "mm","gg"]).
 
                 Optional keys:
 
@@ -206,17 +309,31 @@ class Experiment:
 
         df_taus = load_events(file_paths)
         if duplicate_taus is not None:
-            df_taus = pd.concat([df_taus] * duplicate_taus, ignore_index=True)
+            if duplicate_taus >= 1:
+                df_taus = np.repeat(df_taus, duplicate_taus, axis=0)
+            else:
+                df_taus = df_taus[: int(duplicate_taus * df_taus.shape[0]), :]
 
-        self.nevents = len(df_taus)
+            # df_taus = pd.concat([df_taus] * duplicate_taus, ignore_index=True)
 
-        self.tau_weights = df_taus.weight / df_taus.weight.sum()
+        self.nevents = np.shape(df_taus)[0]
+
+        # self.tau_weights = df_taus.weight / df_taus.weight.sum()
+        self.tau_weights = df_taus[:, -1] / df_taus[:, -1].sum()
+        # self.p4_taus = np.array(
+        #     [
+        #         df_taus["E"],
+        #         df_taus["px"],
+        #         df_taus["py"],
+        #         df_taus["pz"],
+        #     ]
+        # ).T
         self.p4_taus = np.array(
             [
-                df_taus["E"],
-                df_taus["px"],
-                df_taus["py"],
-                df_taus["pz"],
+                df_taus[:, -5],
+                df_taus[:, -4],
+                df_taus[:, -3],
+                df_taus[:, -2],
             ]
         ).T
 
@@ -254,7 +371,8 @@ class Experiment:
             self.alp = alp
         else:
             self.alp = models.ALP(0.5, 1e5)
-        self.get_event_rate(self.alp)
+        self.tau_BRs = {}
+        self.event_rate = self.get_event_rate(self.alp)
 
     def sample_alp_energy_spectrum(self, production_channel, alp):
         # ECM_alp = Cfv.random_generator(
@@ -295,7 +413,17 @@ class Experiment:
             phitau_LAB,
         )
 
-        self.weights = self.tau_weights * alp.tau_BR(production_channel)
+        # Total tau branching ratio
+        if production_channel == "tau>e+a" or production_channel == "tau>mu+a":
+            # 2-body, then exactly calculable,
+            self.tau_BRs[production_channel] = alp.tau_BR(production_channel)
+        else:
+            # 3 or 4-body, so perform a MC numerical integral using our own samples
+            self.tau_BRs[production_channel] = np.sum(
+                alp.tau_diff_BR(ECM_alp, production_channel) / self.nevents
+            ) * (alp.Ea_max[production_channel] - alp.Ea_min[production_channel])
+
+        self.weights = self.tau_weights * self.tau_BRs[production_channel]
 
         return self.p4_alp, self.weights
 
@@ -310,8 +438,8 @@ class Experiment:
             "tau>mu+a",
             "tau>nu+pi+a",
             "tau>nu+rho+a",
-            # "tau>nu+nu+e+a",
-            # "tau>nu+nu+mu+a",
+            "tau>nu+nu+e+a",
+            "tau>nu+nu+mu+a",
         ]
         p4_list = []
         weights_list = []
@@ -454,8 +582,8 @@ class Experiment:
         self.flux = self.norm * self.weights[self.mask_alp_in_acc]
         self.p4_alp_in_acc = self.p4_alp[self.mask_alp_in_acc]
         self.channel_list_inc_acc = self.channel_list[self.mask_alp_in_acc]
-
-        return np.sum(self.flux * self.get_signal_prob_decay(alp))
+        self.total_rate = np.sum(self.flux * self.get_signal_prob_decay(alp))
+        return self.total_rate
         #     np.sum(
         #     self.dPhidp
         #     * alp.prob_decay(self.pc, self.L, self.dZ)
@@ -473,21 +601,20 @@ class Experiment:
             )
 
     def reweight(self, alp_old, alp_new):
+        """Reweight the event rate for a new ALP decay constant
 
-        for channel in np.unique(self.channel_list_inc_acc):
-            mask = self.channel_list_inc_acc == channel
-            new_rate = (alp_new.tau_BR(channel) / alp_old.tau_BR(channel)) * np.sum(
-                self.flux[mask] * self.get_signal_prob_decay(alp_new, mask=mask)
-            )
-            # * np.sum(
-            #     self.dPhidp
-            #     * alp2.prob_decay(self.pc, self.L, self.dZ)
-            #     * alp2.alp_visible_BR(self.final_states)
-            # )
-            return new_rate
-        else:
-            # If no channel is found, return 0
-            return 0
+            NOTE: Both ALP *MUST* be the same mass and have the same 'c_lepton' matrix.
+
+        Args:
+            alp_old (alp.models.ALP): starting ALP
+            alp_new (alp.models.ALP): desired ALP
+
+        Returns:
+            float: the new event rate
+        """
+        return (alp_old.f_a / alp_new.f_a) ** 2 * np.sum(
+            self.flux * self.get_signal_prob_decay(alp_new)
+        )
 
     # def get_tau_events(df):
     #     tau_events = np.abs(df.pid) == 15

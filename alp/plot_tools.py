@@ -7,7 +7,6 @@ from math import log10, floor, erf
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import rc, rcParams
-from matplotlib.font_manager import FontProperties
 import matplotlib.tri as tri
 from scipy.spatial.distance import pdist, squareform
 from matplotlib import colors as mpl_colors
@@ -16,12 +15,12 @@ from scipy.interpolate import splprep, splev
 
 import scipy
 
-from DarkNews import const
+from . import const
 from alp.models import ALP
 
 
 ###########################
-# Matheus
+#
 fsize = 11
 fsize_annotate = 10
 
@@ -41,17 +40,6 @@ rc("text", usetex=True)
 rc("font", **{"family": "serif", "serif": ["Computer Modern Roman"]})
 matplotlib.rcParams["hatch.linewidth"] = 0.3
 
-rcParams.update(rcparams)
-
-# settings for Mini Figs
-TOTAL_RATE = False
-INCLUDE_MB_LAST_BIN = False
-STACKED = False
-PLOT_FAMILY = False
-PATH_PLOTS = "plots/event_rates/"
-
-PAPER_TAG = r"HKZ\,2024"
-
 CB_color_cycle = [
     "#377eb8",
     "#ff7f00",
@@ -63,6 +51,17 @@ CB_color_cycle = [
     "#e41a1c",
     "#dede00",
 ]
+plt.rcParams["axes.prop_cycle"] = plt.cycler(color=CB_color_cycle)
+rcParams.update(rcparams)
+
+# settings for Mini Figs
+TOTAL_RATE = False
+INCLUDE_MB_LAST_BIN = False
+STACKED = False
+PLOT_FAMILY = False
+PATH_PLOTS = "plots/event_rates/"
+
+PAPER_TAG = r"HKZ\,2024"
 
 
 ##########################
@@ -81,30 +80,6 @@ def get_chi2vals_w_sigma(sigma, ndof):
 
 def get_chi2vals_w_CL(CLs, ndof):
     return [chi2.ppf(cl, ndof) for cl in CLs]
-
-
-###########################
-# Kevin
-font0 = FontProperties()
-font = font0.copy()
-font.set_size(fsize)
-font.set_family("serif")
-
-labelfont = font0.copy()
-labelfont.set_size(fsize)
-labelfont.set_weight("bold")
-# params= {'text.latex.preamble' : [r'\usepackage{inputenc}']}
-# plt.rcParams.update(params)
-legendfont = font0.copy()
-legendfont.set_size(fsize)
-legendfont.set_weight("bold")
-
-redcol = "#e41a1c"
-bluecol = "#1f78b5"
-grncol = "#33a12c"
-purcol = "#613d9b"
-pinkcol = "#fc9b9a"
-orcol = "#ff7f00"
 
 
 def std_fig(ax_form=std_axes_form, figsize=std_figsize, rasterized=False):
@@ -183,51 +158,6 @@ def step_plot(
     )
 
 
-def plot_MB_vertical_region(ax, color="dodgerblue", label=r"MiniBooNE $1 \sigma$"):
-    ##########
-    # MINIBOONE 2018
-    matplotlib.rcParams["hatch.linewidth"] = 0.7
-    y = [0, 1e10]
-    NEVENTS = 381.2
-    ERROR = 85.2
-    xleft = (NEVENTS - ERROR) / NEVENTS
-    xright = (NEVENTS + ERROR) / NEVENTS
-    ax.fill_betweenx(
-        y,
-        [xleft, xleft],
-        [xright, xright],
-        zorder=3,
-        ec=color,
-        fc="None",
-        hatch="\\\\\\\\\\",
-        lw=0,
-        label=label,
-    )
-
-    ax.vlines(1, 0, 1e10, zorder=3, lw=1, color=color)
-    ax.vlines(xleft, 0, 1e10, zorder=3, lw=0.5, color=color)
-    ax.vlines(xright, 0, 1e10, zorder=3, lw=0.5, color=color)
-
-
-# Kevin align
-def flushalign(ax):
-    ic = 0
-    for l in ax.get_yticklabels():
-        if ic == 0:
-            l.set_va("bottom")
-        elif ic == len(ax.get_yticklabels()) - 1:
-            l.set_va("top")
-        ic += 1
-
-    ic = 0
-    for lab in ax.get_xticklabels():
-        if ic == 0:
-            lab.set_ha("left")
-        elif ic == len(ax.get_xticklabels()) - 1:
-            lab.set_ha("right")
-        ic += 1
-
-
 # Function to find the path that connects points in order of closest proximity
 def nearest_neighbor_path(points):
     # Compute the pairwise distance between points
@@ -291,31 +221,31 @@ def plot_closed_region(points, logx=False, logy=False):
 
 
 def get_ordered_closed_region(points, logx=False, logy=False):
-    xraw, yraw = points
-
+    x, y = points
     # check for nans
     if np.isnan(points).sum() > 0:
         raise ValueError("NaN's were found in input data. Cannot order the contour.")
 
-    # check for repeated x-entries -- remove them
-    # x, mask_diff = np.unique(x, return_index=True)
-    # y = y[mask_diff]
+    # check for repeated x-entries --
+    # this is an error because
+    x, mask_diff = np.unique(x, return_index=True)
+    y = y[mask_diff]
 
     if logy:
-        if (yraw == 0).any():
+        if (y == 0).any():
             raise ValueError("y values cannot contain any zeros in log mode.")
-        yraw = np.log10(yraw)
+        sy = 1  # np.sign(y)
+        ssy = 1  # (np.abs(y) < 1) * (-1) + (np.abs(y) > 1) * (1)
+        y = ssy * np.log10(y * sy)
     if logx:
-        if (xraw == 0).any():
+        if (x == 0).any():
             raise ValueError("x values cannot contain any zeros in log mode.")
-        xraw = np.log10(xraw)
+        sx = 1  # np.sign(x)
+        ssx = 1  # (x < 1) * (-1) + (x > 1) * (1)
+        x = ssx * np.log10(x * sx)
 
-    # Transform to unit square space:
-    xmin, xmax = np.min(xraw), np.max(xraw)
-    ymin, ymax = np.min(yraw), np.max(yraw)
-
-    x = (xraw - xmin) / (xmax - xmin)
-    y = (yraw - ymin) / (ymax - ymin)
+    xmin, ymin = np.min(x), np.min(y)
+    x, y = x - xmin, y - ymin
 
     points = np.array([x, y]).T
     # points_s     = (points - points.mean(0))
@@ -353,14 +283,13 @@ def get_ordered_closed_region(points, logx=False, logy=False):
 
     # Return the ordered path indices and the corresponding points
     x_new, y_new = points[path].T
-
-    x_new = x_new * (xmax - xmin) + xmin
-    y_new = y_new * (ymax - ymin) + ymin
+    x_new, y_new = x_new + xmin, y_new + ymin
 
     if logx:
-        x_new = 10 ** (x_new)
+        x_new = sx * 10 ** (ssx * x_new)
     if logy:
-        y_new = 10 ** (y_new)
+        y_new = sy * 10 ** (ssy * y_new)
+
     return x_new, y_new
 
 
@@ -538,19 +467,33 @@ def plot_other_limits_Bvis(
 ):
 
     # BaBar Limit
-    ma, qsi = np.genfromtxt("data/digitized/BABAR_leptophilic.dat", unpack=True)
+    ma, qsi = np.genfromtxt("digitized/BABAR_leptophilic.dat", unpack=True)
     ax.fill_between(
         ma,
         (1 + (ma < const.m_tau - const.m_mu) * 1e100) * qsi / const.vev_EW,
         qsi / qsi,
-        label="BABAR",
         color="silver",
         linestyle="-",
     )
     ax.plot(
         ma,
         (1 + (ma < const.m_tau - const.m_mu) * 1e100) * qsi / const.vev_EW,
-        label="BABAR",
+        color="black",
+        linestyle="-",
+        lw=linewidth,
+    )
+    # BELLE Limit
+    ma, qsi = np.genfromtxt("digitized/Belle_leptophilic.dat", unpack=True)
+    ax.fill_between(
+        ma,
+        (1 + (ma < const.m_tau - const.m_mu) * 1e100) * qsi / const.vev_EW,
+        qsi / qsi,
+        color="silver",
+        linestyle="-",
+    )
+    ax.plot(
+        ma,
+        (1 + (ma < const.m_tau - const.m_mu) * 1e100) * qsi / const.vev_EW,
         color="black",
         linestyle="-",
         lw=linewidth,
@@ -564,7 +507,7 @@ def plot_other_limits_Bvis(
     ################################################################
     # Belle-II (Tau -> mu alp)
     ma_limit, B_limit_90CL = np.genfromtxt(
-        "data/digitized/BelleII_tau_to_mu_a.dat", unpack=True
+        "digitized/BelleII_tau_to_mu_a.dat", unpack=True
     )
     B_limit_90CL_interp = np.interp(
         ma_fixed, ma_limit, B_limit_90CL, left=1e100, right=1e100
@@ -603,7 +546,7 @@ def plot_other_limits_Bvis(
     ################################################################
     # Belle-II (Tau -> e alp)
     ma_limit, B_limit_90CL = np.genfromtxt(
-        "data/digitized/BelleII_tau_to_e_a.dat", unpack=True
+        "digitized/BelleII_tau_to_e_a.dat", unpack=True
     )
     B_limit_90CL_interp = np.interp(
         ma_fixed, ma_limit, B_limit_90CL, left=1e100, right=1e100
@@ -799,27 +742,199 @@ def plot_other_limits_Bvis(
     )
 
 
-def plot_other_limits(ax, c_lepton=None, c_NN=0, mN=0, linewidth=0.25):
-
-    # BaBar Limit
-    ma, qsi = np.genfromtxt("data/digitized/BABAR_leptophilic.dat", unpack=True)
+def plot_other_limits(
+    ax,
+    c_lepton=None,
+    c_NN=0,
+    mN=0,
+    linewidth=0.25,
+    vis_color="grey",
+    inv_color="lightgrey",
+    annotate=False,
+    edgecolor="dimgrey",
+):
+    # Muon Limits
+    x, y = np.genfromtxt("digitized/Jodidio_et_al_A.dat", unpack=True)
+    y *= 2
+    x *= 1e-9
     ax.fill_between(
-        ma,
-        (1 + (ma < const.m_tau - const.m_mu) * 1e100) * qsi / const.vev_EW,
-        qsi / qsi,
-        label="BABAR",
-        color="silver",
+        x,
+        (1 / y) / c_lepton[0, 1],
+        y / y,
+        facecolor=inv_color,
         linestyle="-",
+        zorder=0.1,
+        edgecolor="None",
     )
     ax.plot(
-        ma,
-        (1 + (ma < const.m_tau - const.m_mu) * 1e100) * qsi / const.vev_EW,
-        label="BABAR",
-        color="black",
+        x,
+        (1 / y) / c_lepton[0, 1],
+        color="dimgrey",
         linestyle="-",
-        lw=linewidth,
+        lw=0.2,
+        zorder=0.2,
     )
 
+    # x, y = np.genfromtxt("digitized/TWIST_mue_A.dat", unpack=True)
+    # y *= 2
+    # x *= 1e-9
+    # y = y[np.argsort(x)]
+    # x = x[np.argsort(x)]
+    # ax.fill_between(
+    #     x,
+    #     (1 / y) / c_lepton[0, 1],
+    #     y / y,
+    #     facecolor=inv_color,
+    #     edgecolor="None",
+    #     linestyle="-",
+    #     zorder=0.1,
+    # )
+    # ax.plot(
+    #     x,
+    #     (1 / y) / c_lepton[0, 1],
+    #     color=edgecolor,
+    #     linestyle="-",
+    #     lw=0.2,
+    #     zorder=0.2,
+    # )
+
+    # SN1987A
+    x, y = np.genfromtxt("digitized/Supernova_mumu.dat", unpack=True)
+    x *= 1e-9
+    y = y[np.argsort(x)]
+    x = x[np.argsort(x)]
+    ax.fill_between(
+        x,
+        (1 / y) / c_lepton[1, 1],
+        y / y,
+        facecolor=lighten_color(inv_color, 0.5),
+        edgecolor="None",
+        linestyle="-",
+        zorder=0.1,
+    )
+    ax.plot(
+        x,
+        (1 / y) / c_lepton[1, 1],
+        color=lighten_color(edgecolor, 0.5),
+        linestyle=(1, (6, 2)),
+        lw=0.2,
+        zorder=0.2,
+    )
+
+    # SN1987A ee
+    x, y = np.genfromtxt("digitized/Supernova_ee.dat", unpack=True)
+    x *= 1e-9
+    x, y = get_ordered_closed_region([x, y], logx=True, logy=True)
+    ax.fill(
+        x,
+        (1 / y) / c_lepton[0, 0],
+        facecolor=lighten_color(inv_color, 0.5),
+        edgecolor="None",
+        linestyle="-",
+        zorder=0.1,
+    )
+    ax.plot(
+        x,
+        (1 / y) / c_lepton[0, 0],
+        color=lighten_color(edgecolor, 0.5),
+        linestyle=(1, (6, 2)),
+        lw=0.2,
+        zorder=0.2,
+    )
+
+    # SN1987A emu
+    for v in ["v1", "v2"]:
+        x, y = np.genfromtxt(f"digitized/Supernova_emu_{v}.dat", unpack=True)
+        x *= 1e-3
+        y *= 2 / (const.m_e + const.m_mu)
+        x, y = get_ordered_closed_region([x, y], logx=True, logy=True)
+        ax.fill(
+            x,
+            y / c_lepton[0, 1],
+            facecolor=lighten_color(inv_color, 0.5),
+            edgecolor="None",
+            linestyle="-",
+            zorder=0.1,
+            alpha=0.75,
+        )
+        ax.plot(
+            x,
+            y / c_lepton[0, 1],
+            color=lighten_color(edgecolor, 0.5),
+            linestyle=(1, (6, 2)),
+            lw=0.5,
+            zorder=0.2,
+        )
+
+    # PIENU bounds
+    for b in [
+        "digitized/PIENU_mu_to_e_X.dat",
+        "digitized/Derenzo_et_al_mu_to_e_X.dat",
+        "digitized/Bilger_et_al_mu_to_e_X.dat",
+    ]:
+        mX, BR = np.genfromtxt(b, unpack=True)
+        mX *= 1e-3
+        alp = ALP(mX, 1.0, c_lepton=c_lepton, c_NN=c_NN, mN=mN)
+        inv_fa = np.sqrt(BR / alp.BR_li_to_lj_a(1, 0))
+        ax.fill_between(
+            mX,
+            inv_fa,
+            inv_fa / inv_fa,
+            edgecolor="None",
+            facecolor=inv_color,
+            linestyle="-",
+            zorder=0.02,
+        )
+        ax.plot(
+            mX,
+            inv_fa,
+            color="dimgrey",
+            linestyle="-",
+            lw=0.25,
+            zorder=1,
+        )
+
+    pe, BR = np.genfromtxt("digitized/TWIST_mu_to_e_X.dat", unpack=True)
+    pe *= 1e-3
+    mX = np.sqrt(
+        const.m_e**2 + const.m_mu**2 - 2 * const.m_mu * np.sqrt(pe**2 + const.m_e**2)
+    )
+    BR = np.append(BR, BR[np.argmin(mX)])
+    mX = np.append(mX, 0)
+
+    alp = ALP(mX, 1.0, c_lepton=c_lepton, c_NN=c_NN, mN=mN)
+    inv_fa = np.sqrt(BR / alp.BR_li_to_lj_a(1, 0))
+    ax.fill_between(
+        mX,
+        inv_fa,
+        inv_fa / inv_fa,
+        edgecolor="None",
+        facecolor=inv_color,
+        linestyle="-",
+        zorder=0.01,
+    )
+    ax.plot(
+        mX,
+        inv_fa,
+        color="dimgrey",
+        linestyle="-",
+        lw=0.25,
+        zorder=0.2,
+    )
+
+    # ###########################################################
+    # ma, y = np.genfromtxt("digitized/E137_Araki_et_al_LFV.dat", unpack=True)
+    # inv_fa = y / const.m_e
+    # x, y = get_ordered_closed_region([ma, inv_fa], logx=True, logy=True)
+    # ax.plot(
+    #     x,
+    #     y,
+    #     color="black",
+    #     linestyle="-",
+    #     zorder=3,
+    # )
+
+    ###########################################################
     ma = np.geomspace(1e-3, 3, 1000)
     inv_fa = np.geomspace(1e-9, 1e-2, 1000, endpoint=True)
     MA, INV_FA = np.meshgrid(ma, inv_fa)
@@ -828,7 +943,7 @@ def plot_other_limits(ax, c_lepton=None, c_NN=0, mN=0, linewidth=0.25):
     ################################################################
     # Belle-II (Tau -> mu alp)
     ma_limit, B_limit_90CL = np.genfromtxt(
-        "data/digitized/BelleII_tau_to_mu_a.dat", unpack=True
+        "digitized/BelleII_tau_to_mu_a.dat", unpack=True
     )
     B_limit_90CL_interp = np.interp(MA, ma_limit, B_limit_90CL, left=1e100, right=1e100)
 
@@ -841,7 +956,7 @@ def plot_other_limits(ax, c_lepton=None, c_NN=0, mN=0, linewidth=0.25):
         INV_FA,
         BR_tau_mu_a,
         levels=[1, 1e100],
-        colors=["silver"],
+        colors=[inv_color],
         alpha=1,
         zorder=0.2,
     )
@@ -850,7 +965,7 @@ def plot_other_limits(ax, c_lepton=None, c_NN=0, mN=0, linewidth=0.25):
         INV_FA,
         BR_tau_mu_a,
         levels=[1],
-        colors=["black"],
+        colors=[edgecolor],
         linestyles="-",
         linewidths=[linewidth],
         alpha=1,
@@ -863,7 +978,7 @@ def plot_other_limits(ax, c_lepton=None, c_NN=0, mN=0, linewidth=0.25):
         INV_FA,
         BR_tau_ell_a,
         levels=[1e-2, 1e100],
-        colors=["silver"],
+        colors=[inv_color],
         alpha=1,
         zorder=0.5,
     )
@@ -872,7 +987,7 @@ def plot_other_limits(ax, c_lepton=None, c_NN=0, mN=0, linewidth=0.25):
         INV_FA,
         BR_tau_ell_a,
         levels=[1e-2],
-        colors=["black"],
+        colors=[edgecolor],
         linestyles="-",
         linewidths=[linewidth],
         alpha=1,
@@ -882,7 +997,7 @@ def plot_other_limits(ax, c_lepton=None, c_NN=0, mN=0, linewidth=0.25):
     ################################################################
     # Belle-II (Tau -> e alp)
     ma_limit, B_limit_90CL = np.genfromtxt(
-        "data/digitized/BelleII_tau_to_e_a.dat", unpack=True
+        "digitized/BelleII_tau_to_e_a.dat", unpack=True
     )
     B_limit_90CL_interp = np.interp(MA, ma_limit, B_limit_90CL, left=1e100, right=1e100)
 
@@ -895,7 +1010,7 @@ def plot_other_limits(ax, c_lepton=None, c_NN=0, mN=0, linewidth=0.25):
         INV_FA,
         BR_tau_e_a,
         levels=[1, 1e100],
-        colors=["silver"],
+        colors=[inv_color],
         alpha=1,
         zorder=0.2,
     )
@@ -904,7 +1019,7 @@ def plot_other_limits(ax, c_lepton=None, c_NN=0, mN=0, linewidth=0.25):
         INV_FA,
         BR_tau_e_a,
         levels=[1],
-        colors=["black"],
+        colors=[edgecolor],
         linestyles="-",
         linewidths=[linewidth],
         alpha=1,
@@ -930,7 +1045,7 @@ def plot_other_limits(ax, c_lepton=None, c_NN=0, mN=0, linewidth=0.25):
         INV_FA,
         BR_tau_mu_a,
         levels=[1, 1e100],
-        colors=["grey"],
+        colors=[vis_color],
         alpha=1,
         zorder=0,
     )
@@ -939,7 +1054,7 @@ def plot_other_limits(ax, c_lepton=None, c_NN=0, mN=0, linewidth=0.25):
         INV_FA,
         BR_tau_mu_a,
         levels=[1],
-        colors=["black"],
+        colors=[edgecolor],
         linestyles="-",
         linewidths=[linewidth],
         alpha=1,
@@ -957,7 +1072,7 @@ def plot_other_limits(ax, c_lepton=None, c_NN=0, mN=0, linewidth=0.25):
         INV_FA,
         BR_tau_mu_a,
         levels=[1, 1e100],
-        colors=["grey"],
+        colors=[vis_color],
         alpha=1,
         zorder=0,
     )
@@ -966,7 +1081,7 @@ def plot_other_limits(ax, c_lepton=None, c_NN=0, mN=0, linewidth=0.25):
         INV_FA,
         BR_tau_mu_a,
         levels=[1],
-        colors=["black"],
+        colors=[edgecolor],
         linestyles="-",
         linewidths=[linewidth],
         alpha=1,
@@ -984,7 +1099,7 @@ def plot_other_limits(ax, c_lepton=None, c_NN=0, mN=0, linewidth=0.25):
         INV_FA,
         BR_tau_mu_a,
         levels=[1, 1e100],
-        colors=["grey"],
+        colors=[vis_color],
         alpha=1,
         zorder=0,
     )
@@ -993,7 +1108,7 @@ def plot_other_limits(ax, c_lepton=None, c_NN=0, mN=0, linewidth=0.25):
         INV_FA,
         BR_tau_mu_a,
         levels=[1],
-        colors=["black"],
+        colors=[edgecolor],
         linestyles="-",
         linewidths=[linewidth],
         alpha=1,
@@ -1010,7 +1125,7 @@ def plot_other_limits(ax, c_lepton=None, c_NN=0, mN=0, linewidth=0.25):
         INV_FA,
         BR_tau_mu_a,
         levels=[1, 1e100],
-        colors=["grey"],
+        colors=[vis_color],
         alpha=1,
         zorder=0,
     )
@@ -1019,7 +1134,7 @@ def plot_other_limits(ax, c_lepton=None, c_NN=0, mN=0, linewidth=0.25):
         INV_FA,
         BR_tau_mu_a,
         levels=[1],
-        colors=["black"],
+        colors=[edgecolor],
         linestyles="-",
         linewidths=[linewidth],
         alpha=1,
@@ -1037,7 +1152,7 @@ def plot_other_limits(ax, c_lepton=None, c_NN=0, mN=0, linewidth=0.25):
         INV_FA,
         BR_tau_mu_a,
         levels=[1, 1e100],
-        colors=["grey"],
+        colors=[vis_color],
         alpha=1,
         zorder=0,
     )
@@ -1046,9 +1161,125 @@ def plot_other_limits(ax, c_lepton=None, c_NN=0, mN=0, linewidth=0.25):
         INV_FA,
         BR_tau_mu_a,
         levels=[1],
-        colors=["black"],
+        colors=[edgecolor],
         linestyles="-",
         linewidths=[linewidth],
         alpha=1,
         zorder=2,
+    )
+    if annotate:
+        ax.annotate(
+            r"Supernova $g_{\mu \mu}$",
+            xy=(1.05e-2, 2.4e-8 / c_lepton[1, 1]),
+            xycoords="data",
+            fontsize=9,
+            horizontalalignment="left",
+            verticalalignment="center",
+            zorder=3,
+            color=edgecolor,
+        )
+        ax.annotate(
+            r"Supernova $g_{ee}$",
+            xy=(1.05e-2, 8e-8 / c_lepton[0, 0]),
+            xycoords="data",
+            fontsize=9,
+            horizontalalignment="left",
+            verticalalignment="center",
+            zorder=3,
+            color=edgecolor,
+        )
+        ax.annotate(
+            r"Supernova $g_{e\mu}$",
+            xy=(1.05e-2, 0.6e-8 / c_lepton[0, 1]),
+            xycoords="data",
+            fontsize=9,
+            horizontalalignment="left",
+            verticalalignment="center",
+            zorder=3,
+            color=edgecolor,
+        )
+        if 8e-10 / c_lepton[0, 1] < 5e-4:
+            ax.annotate(
+                r"$\mu\to e a_{\rm inv}$",
+                xy=(1.05e-2, 1.0e-9 / c_lepton[0, 1]),
+                xycoords="data",
+                fontsize=9,
+                horizontalalignment="left",
+                verticalalignment="center",
+                rotation=0,
+                zorder=3,
+                color="dimgrey",
+            )
+        ax.annotate(
+            r"$\tau \to \ell + a_{\rm inv}$",
+            xy=(1.05e-2, 3e-7 / c_lepton[0, 2]),
+            xycoords="data",
+            fontsize=9,
+            horizontalalignment="left",
+            verticalalignment="center",
+            zorder=3,
+            color=edgecolor,
+        )
+        ax.annotate(
+            r"$\tau$ lifetime",
+            xy=(1.05e-2, 9e-7 / c_lepton[0, 2]),
+            xycoords="data",
+            fontsize=9,
+            horizontalalignment="left",
+            verticalalignment="center",
+            zorder=3,
+            color=edgecolor,
+        )
+        ax.annotate(
+            r"$\tau \to \ell + a_{\rm vis}$",
+            xy=(0.55, 2.5e-7 / np.sqrt(c_lepton[1, 2])),
+            xycoords="data",
+            fontsize=9,
+            horizontalalignment="left",
+            verticalalignment="center",
+            zorder=3,
+            color="black",
+        )
+
+
+def plot_hist_with_errors(
+    ax, data, weights, bins, label, color, zorder=2, lw=1.5, nevents=1, ls="-"
+):
+    norm = np.max(weights)
+    weights = weights / norm
+    # Compute histogram and sum of squared weights per bin
+    counts, bin_edges = np.histogram(data, bins=bins, weights=weights * nevents)
+    sumw2, _ = np.histogram(data, bins=bins, weights=np.square(weights * nevents))
+
+    # Bin centers for plotting
+    bin_centers = 0.5 * (bin_edges[1:] + bin_edges[:-1])
+    bin_widths = np.diff(bin_edges)
+
+    counts /= nevents
+    sumw2 /= nevents**2
+    # Plot main histogram
+    ax.hist(
+        data,
+        bins=bins,
+        weights=weights * norm,
+        label=label,
+        histtype="step",
+        edgecolor=color,
+        linestyle=ls,
+        density=False,
+        zorder=zorder,
+        lw=lw,
+    )
+
+    # Plot error bars as bars around each bin
+    ax.bar(
+        bin_centers,
+        2 * np.sqrt(sumw2) * norm,
+        bottom=(counts - np.sqrt(sumw2)) * norm,
+        width=bin_widths,
+        edgecolor="None",
+        facecolor=color,
+        alpha=0.5,
+        lw=0,
+        zorder=zorder - 0.1,
     )

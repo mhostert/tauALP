@@ -9,13 +9,14 @@ from tqdm.contrib.concurrent import process_map
 
 # Pythia8 tau events
 NUMI_files = [
-    f"pythia8_events/tau_events_NuMI_120GeV_v3_{i}.txt" for i in range(0, 8)
-] + [f"pythia8_events/tau_events_NuMI_120GeV_v4_{i}.txt" for i in range(0, 8)]
-SPS_files = (
-    [f"pythia8_events/tau_events_SPS_400GeV_v3_{i}.txt" for i in range(0, 8)]
-    + [f"pythia8_events/tau_events_SPS_400GeV_v4_{i}.txt" for i in range(0, 8)]
-    + [f"pythia8_events/tau_events_SPS_400GeV_v5_{i}.txt" for i in range(0, 8)]
-)
+    f"pythia8_events/tau_events_120GeV_HardOff_pT0.0001_{i}.txt" for i in range(0, 8)
+] + [
+    f"pythia8_events/tau_events_120GeV_HardOff_pT0.0001_v2_{i}.txt" for i in range(0, 8)
+]
+
+SPS_files = [
+    f"pythia8_events/tau_events_120GeV_HardOff_pT0.0001_{i}.txt" for i in range(0, 8)
+]
 LHC_files = [f"pythia8_events/tau_events_LHC_13.6TeV_v6_{i}.txt" for i in range(0, 8)]
 
 
@@ -47,7 +48,7 @@ PROTODUNE_NP04 = exp.Experiment(SPS_files, exp_dic=exp.PROTO_DUNE_NP04_exp)
 FASER = exp.Experiment(LHC_files, exp_dic=exp.FASER_exp)
 FASER2 = exp.Experiment(LHC_files, exp_dic=exp.FASER2_exp)
 
-NPOINTS = 31
+NPOINTS = 201
 
 
 # def simulate(exp_case, **kwargs):
@@ -127,13 +128,30 @@ if __name__ == "__main__":
     # run_simulations(exp_list, BP_NAME, **kwargs)
 
     # """'
-    #     LFC   FA vs ma
+    #     LFC   FA vs ma -- e-tau coupled
     # """
     # BP_NAME = "LFC_etau"
     # c_lepton = np.diag([1, 0, 1])
 
     # kwargs = {
     #     "inv_fa_range": [1e-5, 1],
+    #     "ma_range": [2e-3, const.m_tau * 1.1],
+    #     "name": BP_NAME,
+    #     "c_lepton": c_lepton,
+    #     "Npoints": NPOINTS,
+    # }
+
+    # exp_list = [CHARM, BEBC, SHIP, FASER2, PROTODUNE_NP02, PROTODUNE_NP04, DUNE]
+    # run_simulations(exp_list, BP_NAME, **kwargs)
+
+    # """'
+    #     LFC   FA vs ma -- tauphilic
+    # """
+    # BP_NAME = "LFC_tauphilic"
+    # c_lepton = np.diag([0, 0, 1])
+
+    # kwargs = {
+    #     "inv_fa_range": [1e-4, 10],
     #     "ma_range": [2e-3, const.m_tau * 1.1],
     #     "name": BP_NAME,
     #     "c_lepton": c_lepton,
@@ -158,17 +176,17 @@ if __name__ == "__main__":
     }
 
     exp_list = [
-        # ICARUS,
-        # MICROBOONE,
-        # NOVA,
-        # CHARM,
-        # BEBC,
-        # SHIP,
-        # FASER,
-        # FASER2,
-        # PROTODUNE_NP02,
-        # PROTODUNE_NP04,
-        # DUNE,
+        ICARUS,
+        MICROBOONE,
+        NOVA,
+        CHARM,
+        BEBC,
+        SHIP,
+        FASER,
+        FASER2,
+        PROTODUNE_NP02,
+        PROTODUNE_NP04,
+        DUNE,
         TWOBYTWO,
         TWOBYTWO_ABSORBER,
     ]

@@ -1,4 +1,5 @@
 #include "Pythia8/Pythia.h"
+#include <ctime>  
 #include <iostream>
 #include <cmath>
 #include <random>
@@ -35,6 +36,11 @@ int main(int argc, char* argv[]) {
 
   // Generator
   Pythia pythia;
+
+  // Set the seed based on the current time
+  int seed = static_cast<int>(time(nullptr));
+  pythia.readString("Random:setSeed = on");
+  pythia.readString("Random:seed = " + std::to_string(seed));
 
   // Setting up the Monash tune for p-p collisions
   pythia.readString("Tune:pp = 14");

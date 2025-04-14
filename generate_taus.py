@@ -3,9 +3,17 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import argparse
 
 
-def run_simulation(num_events, base_filename, beam_energy):
+def run_simulation(num_events, base_filename, beam_energy, soft_or_hard, pTcut, seed):
     # Execute the C++ program with the base filename and the number of events as command line arguments
-    command = ["./ntaus", str(num_events), base_filename, str(beam_energy)]
+    command = [
+        "./ntaus",
+        str(num_events),
+        base_filename,
+        str(beam_energy),
+        str(soft_or_hard),
+        str(pTcut),
+        str(seed),
+    ]
     result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     # Print the result status
@@ -33,18 +41,34 @@ def main():
         required=True,
         help="name for this simulation to be used in saving files, e.g., NuMI_120GeV",
     )
+    parser.add_argument(
+        "--soft_or_hard",
+        type=str,
+        required=True,
+        help="whether to simulate with soft or hard QCD events. Options are 'soft', 'hard', or 'both'.",
+    )
+    parser.add_argument(
+        "--pTcut",
+        type=str,
+        required=False,
+        default="1.0",
+        help="the pThat cut to be used when avoiding double counting in QCDsoft vs QCDhard events. Should be O(1.0 GeV).",
+    )
+    parser.add_argument(
+        "--seed",
+        type=str,
+        required=False,
+        default="666",
+        help="integer seed for Pythia. Each event file will have seed = (seed+i) as an input, where i is the generator index (0 to n_cores).",
+    )
     args = parser.parse_args()
-
     # Configuration for different runs
     tasks = [
-        (N_EVENTS, "0"),
-        (N_EVENTS, "1"),
-        (N_EVENTS, "2"),
-        (N_EVENTS, "3"),
-        (N_EVENTS, "4"),
-        (N_EVENTS, "5"),
-        (N_EVENTS, "6"),
-        (N_EVENTS, "7"),
+        (
+            str(i),
+            str(i + int(args.seed)),
+        )
+        for i in range(8)
     ]
 
     # Use ProcessPoolExecutor to run tasks in parallel
@@ -52,9 +76,12 @@ def main():
         futures = [
             executor.submit(
                 run_simulation,
-                task[0],
-                args.name + "_" + task[1],
+                N_EVENTS,  # number of events
+                args.name + "_" + task[0],  # file names (0 - n_cores)
                 str(args.beam_energy),
+                args.soft_or_hard,
+                args.pTcut,
+                task[1],  # seed
             )
             for task in tasks
         ]

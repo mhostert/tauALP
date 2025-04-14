@@ -1242,6 +1242,538 @@ def plot_other_limits(
         )
 
 
+def plot_other_limits_LFC(
+    ax, c_lepton, alp=None, linewidth=1, nocolor="lightgrey", edgecolor="dimgrey"
+):
+
+    ###########################################################
+    # ma, y = np.genfromtxt("digitized/E137_Araki_et_al_LFC.dat", unpack=True)
+    # inv_fa = y / const.m_e
+    # ma[ma > 2 * const.m_mu] = 2*const.m_mu
+    # x, y = get_ordered_closed_region([ma, inv_fa], logx=True, logy=True)
+    # ax.fill(
+    #     x,
+    #     y,
+    #     facecolor=nocolor,
+    #     edgecolor="red",
+    #     linestyle="-",
+    #     zorder=1.1,
+    #     linewidth=1,
+    #     # label='E137 (Araki et al. 2021)',
+    # )
+
+    if c_lepton[0, 0] > 0:
+
+        if c_lepton[0, 0] == c_lepton[1, 1] and c_lepton[1, 1] == c_lepton[2, 2]:
+            ###########################################################
+            x, y = np.genfromtxt("digitized/NA64mu_LFC.dat", unpack=True)
+            x = x * 1e-3
+            x, y = get_ordered_closed_region([x, y], logx=True, logy=True)
+            ax.fill(
+                x,
+                y,
+                facecolor="lightgrey",
+                edgecolor="None",
+                linestyle="-",
+                zorder=0.4,
+            )
+            ax.fill(
+                x,
+                y,
+                facecolor="None",
+                edgecolor=edgecolor,
+                linestyle="-",
+                zorder=1.01,
+                linewidth=2 * linewidth,
+            )
+            ax.annotate(
+                r"NA64$\mu$",
+                xy=(0.07, 0.0035),
+                fontsize=10,
+                rotation=-32,
+                color="grey",
+                ha="left",
+                va="bottom",
+            )
+
+            ###########################################################
+            x, y = np.genfromtxt("digitized/E137_LFC.dat", unpack=True)
+            x = x * 1e-3
+            x, y = get_ordered_closed_region([x, y], logx=True, logy=True)
+            ax.fill(
+                x,
+                y,
+                facecolor="lightgrey",
+                edgecolor="None",
+                linestyle="-",
+                zorder=0.4,
+            )
+            ax.fill(
+                x,
+                y,
+                facecolor="None",
+                edgecolor=edgecolor,
+                linestyle="-",
+                zorder=2,
+                linewidth=2 * linewidth,
+            )
+            ax.annotate(
+                r"E137 (Eberhart et al)",
+                xy=(4e-3, 0.3e-4),
+                fontsize=10,
+                color="grey",
+                ha="left",
+                va="bottom",
+                rotation=0,
+            )
+            ###########################################################
+            x, y = np.genfromtxt("digitized/NA64vis_LFC.dat", unpack=True)
+            x = x * 1e-3
+            x, y = get_ordered_closed_region([x, y], logx=True, logy=True)
+            ax.fill(
+                x,
+                y,
+                facecolor="lightgrey",
+                edgecolor="None",
+                linestyle="-",
+                zorder=0.4,
+            )
+            ax.fill(
+                x,
+                y,
+                facecolor="None",
+                edgecolor=edgecolor,
+                linestyle="-",
+                zorder=2,
+                linewidth=2 * linewidth,
+            )
+            ax.annotate(
+                r"NA64e",
+                xy=(7e-3, 3.2e-1),
+                fontsize=10,
+                color="grey",
+                ha="left",
+                va="bottom",
+                rotation=-36,
+            )
+
+        ###########################################################
+        x, y = np.genfromtxt("digitized/Orsay_Liu_et_al.dat", unpack=True)
+        x = x * 1e-3
+        y = const.eQED * y / const.m_e
+        x, y = get_ordered_closed_region([x, y], logx=True, logy=True)
+        ax.fill(
+            x,
+            y,
+            facecolor="lightgrey",
+            edgecolor="None",
+            linestyle="-",
+            zorder=0.4,
+            # label='E137 (Araki et al. 2021)',
+        )
+        ax.fill(
+            x,
+            y,
+            facecolor="None",
+            edgecolor=edgecolor,
+            linestyle="-",
+            zorder=1.01,
+            linewidth=2 * linewidth,
+            # label='E137 (Araki et al. 2021)',
+        )
+        # ###########################################################
+        # x, y = np.genfromtxt("digitized/NA64_pseudoscalar.dat", unpack=True)
+        # x = x * 1e-3
+        # y = const.eQED * y / const.m_e
+        # x, y = get_ordered_closed_region([x, y], logx=True, logy=True)
+        # ax.fill(
+        #     x,
+        #     y,
+        #     facecolor="lightgrey",
+        #     edgecolor="None",
+        #     linestyle="-",
+        #     zorder=0.4,
+        # )
+        # ax.fill(
+        #     x,
+        #     y,
+        #     facecolor="None",
+        #     edgecolor=edgecolor,
+        #     linestyle="-",
+        #     zorder=1.01,
+        #     linewidth=2 * linewidth,
+        # )
+
+        ###########################################################
+        x, y = np.genfromtxt("digitized/E141_Liu_et_al.dat", unpack=True)
+        x = x * 1e-3
+        y = const.eQED * y / const.m_e
+        x, y = get_ordered_closed_region([x, y], logx=True, logy=True)
+        ax.fill(
+            x,
+            y,
+            facecolor="lightgrey",
+            edgecolor="None",
+            linestyle="-",
+            zorder=0.4,
+            # label='E137 (Araki et al. 2021)',
+        )
+        ax.fill(
+            x,
+            y,
+            facecolor="None",
+            edgecolor=edgecolor,
+            linestyle="-",
+            zorder=1.01,
+            linewidth=2 * linewidth,
+            # label='E137 (Araki et al. 2021)',
+        )
+
+        # Create a new figure with a specific size
+        norm = 1 / 2 / const.m_e  # gee
+
+        ma, ge = np.genfromtxt("digitized/SN1987A_cooling_cool.dat", unpack=True)
+        ma = ma * 1e-3
+        inv_fa = ge * norm
+        x, y = get_ordered_closed_region([ma, inv_fa], logx=True, logy=True)
+        ax.fill(
+            x,
+            y,
+            facecolor=nocolor,
+            edgecolor=edgecolor,
+            alpha=1,
+            zorder=1.1,
+            linewidth=linewidth,
+        )
+
+        # ma, ge = np.genfromtxt('digitized/SN1987A_B=1_cool.dat', unpack=True)
+        # ma = ma * 1e-3
+        # inv_fa = ge *norm
+        # x,y=get_ordered_closed_region([ma, inv_fa], logx=True, logy=True)
+
+        # ax.plot(x, y, ls=(1,(1,1)), color='black', alpha=1, zorder=2, linewidth=linewidth*2)
+
+        ma, ge = np.genfromtxt("digitized/SN1987A_B=0.1_cool.dat", unpack=True)
+        ma = ma * 1e-3
+        inv_fa = ge * norm
+        x, y = get_ordered_closed_region([ma, inv_fa], logx=True, logy=True)
+        plt.plot(x, y, color="silver", zorder=1.1, linewidth=1)
+        ax.fill(
+            x,
+            y,
+            facecolor=lighten_color(nocolor, 0.5),
+            edgecolor="black",
+            alpha=1,
+            zorder=-1.1,
+            linewidth=linewidth,
+        )
+
+        # BaBar Limit
+        ma, qsi = np.genfromtxt("digitized/BABAR_leptophilic.dat", unpack=True)
+        ax.fill_between(
+            ma,
+            qsi / const.vev_EW,
+            qsi / qsi * 100,
+            color=nocolor,
+            edgecolor="None",
+            linestyle="-",
+        )
+        ax.plot(
+            ma,
+            qsi / const.vev_EW,
+            color=edgecolor,
+            linestyle="-",
+            lw=linewidth,
+        )
+
+        # Belle Limit
+        ma, qsi = np.genfromtxt("digitized/Belle_leptophilic.dat", unpack=True)
+        ax.fill_between(
+            ma,
+            qsi / const.vev_EW,
+            qsi / qsi,
+            color="silver",
+            edgecolor="None",
+            linestyle="-",
+        )
+        ax.plot(
+            ma,
+            qsi / const.vev_EW,
+            color=edgecolor,
+            linestyle="-",
+            lw=linewidth,
+        )
+        ###########################################################
+        if c_lepton[0, 0] > 0 and c_lepton[1, 1] == 0:
+
+            x, y = np.genfromtxt("digitized/E137_Araki_et_al_LFC.dat", unpack=True)
+            y = y / const.m_e
+            # y = np.append(y, y[np.argmin(x*y)])
+            # x = np.append(x, 1e-3)
+            x, y = get_ordered_closed_region([x, y], logx=True, logy=True)
+            ax.fill(
+                x,
+                y,
+                facecolor="lightgrey",
+                edgecolor="None",
+                linestyle="-",
+                zorder=0.4,
+            )
+            ax.fill(
+                x,
+                y,
+                facecolor="None",
+                edgecolor=edgecolor,
+                linestyle="-",
+                zorder=1.01,
+                linewidth=2 * linewidth,
+            )
+
+            x, y = np.genfromtxt("digitized/E137_Liu_et_al_LFC.dat", unpack=True)
+            x = x * 1e-3
+            y = const.eQED * y / const.m_e
+            y = y[x > 1e-3]
+            x = x[x > 1e-3]
+
+            x, y = get_ordered_closed_region([x, y], logx=True, logy=True)
+            ax.fill(
+                x,
+                y,
+                facecolor="lightgrey",
+                edgecolor="None",
+                linestyle="-",
+                zorder=0.4,
+            )
+            ax.fill(
+                x,
+                y,
+                facecolor="None",
+                edgecolor=edgecolor,
+                linestyle="-",
+                zorder=1.01,
+                linewidth=2 * linewidth,
+            )
+
+        ###########################################################
+        # Dror et al. limits
+
+        # Load the data from the files
+        data1 = np.loadtxt("digitized/CHARM.dat")
+        data1[:, 0] *= 1e-3
+        data1[:, 1] *= 2
+        data2 = np.loadtxt("digitized/electron_gminus2.dat")
+        data2[:, 0] *= 1e-3
+        data2[:, 1] *= 2
+        data3 = np.loadtxt("digitized/pion_decay_weak_preserving.dat")
+        data3[:, 0] *= 1e-3
+        data3[:, 1] *= 2
+
+        x, y = get_ordered_closed_region(data1.T, logx=True, logy=True)
+        ax.fill(x, norm * y, facecolor=nocolor, edgecolor="None", alpha=1, zorder=1)
+        if linewidth:
+            ax.fill(
+                x,
+                norm * y,
+                facecolor="None",
+                edgecolor=edgecolor,
+                ls=(1, (3, 1)),
+                lw=linewidth * 2,
+                zorder=1.1,
+            )
+
+        ax.fill_between(
+            data2[:, 0],
+            norm * data2[:, 1],
+            1e5 * np.ones(len(data2[:, 1])),
+            facecolor=nocolor,
+            edgecolor="None",
+            alpha=1,
+            zorder=1,
+        )
+        ax.fill_between(
+            data3[:, 0],
+            norm * data3[:, 1],
+            1e5 * np.ones(len(data3[:, 1])),
+            facecolor=nocolor,
+            edgecolor="None",
+            alpha=1,
+            zorder=1,
+        )
+        ax.fill_between(
+            data3[:, 0],
+            norm * data3[:, 1],
+            1e5 * np.ones(len(data3[:, 1])),
+            edgecolor=edgecolor,
+            facecolor="None",
+            lw=linewidth,
+            zorder=1.1,
+        )
+
+        # Add text labels to the gray regions
+        if linewidth:
+            ax.annotate(
+                r"SN cooling argument",
+                xy=(2.4e-3, 1.2e-5 / 2),
+                fontsize=10,
+                color="grey",
+                ha="left",
+                va="bottom",
+            )
+            ax.annotate(
+                r"SN energy argument",
+                xy=(0.22, 1.2e-5 / 2),
+                fontsize=10,
+                color="grey",
+                ha="left",
+                va="bottom",
+            )
+            ax.annotate(
+                r"CHARM (Dror et al)",
+                xy=(0.002, norm * 2.2e-7),
+                fontsize=10,
+                color="grey",
+                ha="left",
+                va="bottom",
+                rotation=-22,
+            )
+
+            if c_lepton[0, 0] > 0 and c_lepton[1, 1] == 0:
+                ax.annotate(
+                    r"E137 (Araki et al)",
+                    xy=(2e-2, norm * 2.5e-8),
+                    fontsize=10,
+                    color="grey",
+                    ha="left",
+                    va="bottom",
+                    rotation=0,
+                )
+                ax.annotate(
+                    r"E137 (Liu et al)",
+                    xy=(2.4e-3, norm * 7e-8),
+                    fontsize=10,
+                    color="grey",
+                    ha="left",
+                    va="bottom",
+                    rotation=0,
+                )
+
+            # ax.annotate(r'Beam dumps', xy=(1.2e-3, 0.8e-7), fontsize=10, color='grey', ha='left', va='bottom')
+            ax.annotate(
+                r"BaBar/Belle",
+                xy=(0.4, norm * 4e-6),
+                fontsize=10,
+                color="grey",
+                ha="left",
+                va="bottom",
+            )
+            ax.annotate(
+                r"SINDRUM",
+                xy=(0.02, 0.5),
+                fontsize=10,
+                color="grey",
+                ha="left",
+                va="bottom",
+            )
+            # ax.annotate(r'$\pi^+ \to e^+ \nu_e a$', xy=(0.07, norm*1.4e-6), fontsize=10, color='grey', ha='left', va='bottom')
+            ax.annotate(
+                r"Orsay",
+                xy=(1.6e-2, 1e-2),
+                fontsize=10,
+                color="grey",
+                ha="left",
+                va="bottom",
+                rotation=-30,
+            )
+            ax.annotate(
+                r"E141",
+                xy=(3.8e-3, 3e-1),
+                fontsize=10,
+                color="grey",
+                ha="left",
+                va="bottom",
+                rotation=-36,
+            )
+
+    if c_lepton[0, 0] == 0 and c_lepton[1, 1] == 0 and c_lepton[2, 2] > 0:
+        limits = [
+            "E137_tauphilic.dat",
+            "NA64mu_tauphilic.dat",
+            "LEP_tauphilic.dat",
+            "NA64_visible_tauphilic.dat",
+            "NA64_invisible_tauphilic.dat",
+        ]
+        for limit in limits:
+            ###########################################################
+            x, y = np.genfromtxt("digitized/" + limit, unpack=True)
+            x = x * 1e-3
+            x, y = get_ordered_closed_region([x, y], logx=True, logy=True)
+            ax.fill(
+                x,
+                y,
+                facecolor="lightgrey",
+                edgecolor="None",
+                linestyle="-",
+                zorder=1.4,
+                # label='E137 (Araki et al. 2021)',
+            )
+            ax.fill(
+                x,
+                y,
+                facecolor="None",
+                edgecolor=edgecolor,
+                linestyle="-",
+                zorder=2,
+                linewidth=2 * linewidth,
+                # label='E137 (Araki et al. 2021)',
+            )
+
+        # Add text labels to the gray regions
+        if linewidth:
+            ax.annotate(
+                r"E137",
+                xy=(1e-1, 2e-1),
+                fontsize=10,
+                color="grey",
+                ha="left",
+                va="bottom",
+                rotation=-50,
+            )
+            ax.annotate(
+                r"NA64$\mu$",
+                xy=(2.2e-3, 0.7),
+                fontsize=10,
+                color="grey",
+                ha="left",
+                va="bottom",
+            )
+            ax.annotate(
+                r"NA64 (invisible)",
+                xy=(2.2e-3, 1.2),
+                fontsize=10,
+                color="grey",
+                ha="left",
+                va="bottom",
+            )
+            ax.annotate(
+                r"LEP",
+                xy=(1, 3),
+                fontsize=10,
+                color="grey",
+                ha="left",
+                va="bottom",
+                rotation=0,
+            )
+            ax.annotate(
+                r"NA64 (visible)",
+                xy=(0.3, 6),
+                fontsize=10,
+                color="grey",
+                ha="left",
+                va="bottom",
+                rotation=0,
+            )
+
+
 def plot_hist_with_errors(
     ax, data, weights, bins, label, color, zorder=2, lw=1.5, nevents=1, ls="-"
 ):

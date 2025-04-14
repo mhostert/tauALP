@@ -9,9 +9,22 @@ from . import models
 
 
 # Experiments and their parameters
+JPARC_tau_per_POT = 4e-9
 NuMI_tau_per_POT = 5e-7
 SPS_tau_per_POT = 2.7e-6
 
+ND280_exp = {
+    "name": "ND280",
+    "L": 280e2,
+    "x0": 10.75e2,
+    "y0": 0,
+    "dX": 1.7e2,
+    "dY": 1.96e2,
+    "dZ": 3 * 56,
+    "norm": JPARC_tau_per_POT * (12.34e20 + 6.29e20),
+    "Emin": 0.05,
+    "final_states": ["ee", "em", "me", "mm"],
+}
 ICARUS_exp = {
     "name": "ICARUS",
     "L": 803e2,
@@ -218,6 +231,9 @@ def load_events(file_paths, as_dataframe=False, apply_BR_weights=True):
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File not found: {file_path}")
 
+    PARENTS = [411, 431, 100443]
+    BRANCHINGS = [1.20e-3, 5.36e-2, 3.1e-3]
+
     if as_dataframe:
         # Initialize an empty DataFrame
         df = pd.DataFrame()
@@ -241,11 +257,7 @@ def load_events(file_paths, as_dataframe=False, apply_BR_weights=True):
 
         if apply_BR_weights:
             df["weights"] = np.zeros(len(df))
-
-            parents = [411, 431, 100443]
-            branchings = [1.20e-3, 5.36e-2, 3.1e-3]
-
-            for p, br in zip(parents, branchings):
+            for p, br in zip(PARENTS, BRANCHINGS):
                 mask = np.abs(df["mother_pid"]) == p
                 df.loc[mask, "weights"] = br
         else:
@@ -255,10 +267,23 @@ def load_events(file_paths, as_dataframe=False, apply_BR_weights=True):
     else:
         data = np.vstack(
             [
-                np.loadtxt(file, skiprows=1, usecols=(1, 7, 8, 9, 10, 11))
+                # OLD
+                # event_number pid status mother1 mother2 daughter1 daughter2 E px py pz weight
+                # np.loadtxt(file, skiprows=1, usecols=(1, 7, 8, 9, 10, 11))
+                # NEW
+                # event_number particle_count pid E px py pz mother_pid E_mother px_mother py_mother pz_mother
+                np.loadtxt(file, skiprows=1, usecols=(2, 3, 4, 5, 6, 7, 7))
                 for file in file_paths
             ]
         )
+        data[:, -1] = np.zeros(np.shape(data)[0])
+        if apply_BR_weights:
+            for p, br in zip(PARENTS, BRANCHINGS):
+                mask = np.abs(data[:, -2]) == p
+                data[mask, -1] = br
+        else:
+            data[:, -1] = np.ones(np.shape(data)[0])
+
         return data
 
 
@@ -330,10 +355,10 @@ class Experiment:
         # ).T
         self.p4_taus = np.array(
             [
-                df_taus[:, -5],
-                df_taus[:, -4],
-                df_taus[:, -3],
-                df_taus[:, -2],
+                df_taus[:, 1],
+                df_taus[:, 2],
+                df_taus[:, 3],
+                df_taus[:, 4],
             ]
         ).T
 

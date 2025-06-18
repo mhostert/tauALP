@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
+import glob
 
 from DarkNews import Cfourvec as Cfv
 
@@ -8,287 +9,169 @@ from . import const
 from . import models
 
 
-# Experiments and their parameters
-JPARC_tau_per_POT = 4e-9
-NuMI_tau_per_POT = 5e-7
-SPS_tau_per_POT = 2.7e-6
+def read_pythia_file_with_attrs(file_path, n_header_lines=8):
+    # Read header lines (first 8 lines)
+    with open(file_path, "r") as f:
+        header_lines = [next(f) for _ in range(n_header_lines)]
 
-ND280_exp = {
-    "name": "ND280",
-    "L": 280e2,
-    "x0": 10.75e2,
-    "y0": 0,
-    "dX": 1.7e2,
-    "dY": 1.96e2,
-    "dZ": 3 * 56,
-    "norm": JPARC_tau_per_POT * (12.34e20 + 6.29e20),
-    "Emin": 0.05,
-    "final_states": ["ee", "em", "me", "mm"],
-}
-ICARUS_exp = {
-    "name": "ICARUS",
-    "L": 803e2,
-    "x0": 0.0968 * 803e2,
-    "y0": 0,
-    "dX": 2 * 2.67e2,
-    "dY": 2.86e2,
-    "dZ": 17.00e2,
-    "norm": NuMI_tau_per_POT * 3e21,
-    "Emin": 0.1,
-    "final_states": ["ee", "em", "me", "mm", "gg"],
-}
-MicroBooNE_exp = {
-    "name": "MicroBooNE",
-    "L": 685e2,
-    "x0": 0.146 * 685e2,
-    "y0": 0,
-    "dX": 2.26e2,
-    "dY": 2.03e2,
-    "dZ": 9.42e2,
-    "norm": NuMI_tau_per_POT * 2e21,
-    "Emin": 0.1,
-    "final_states": ["ee", "em", "me", "mm", "gg"],
-}
-NoVA_exp = {
-    "name": "NOvA",
-    "L": 990e2,
-    "x0": 14.6e-3 * 990e2,
-    "y0": 0,
-    "dX": 3.9e2,
-    "dY": 3.9e2,
-    "dZ": 12.7e2,
-    "norm": NuMI_tau_per_POT * 4.2e21,
-    "Emin": 0.1,
-    "final_states": ["ee", "em", "me", "mm", "gg"],
-}
-DUNE_exp = {
-    "name": "DUNE-ND",
-    "L": 574e2,
-    "x0": 0,
-    "y0": 0,
-    "dX": 5e2,
-    "dY": 5e2,
-    "dZ": 5.88e2,
-    "norm": NuMI_tau_per_POT * 10 * 1.1e21,
-    "Emin": 1,
-    "final_states": ["ee", "em", "me", "mm", "gg"],
-}
+    attrs = {}
+    # Parse header lines for attributes
+    # We assume the header lines are formatted as "key: value"
+    # These contain information about the generation of events, including the seed, version, and other parameters.
+    # If the header lines are not present, we can skip this part
+    if n_header_lines > 0:
+        for line in header_lines:
+            if ":" in line:
+                key, value = line.strip().split(":", 1)
+                key = key.strip().lower().replace(" ", "_")  # clean the key
+                key = key[2:]
+                value = value.strip()
 
-TwoByTwo_exp = {
-    "name": "2x2 protoDUNE-ND",
-    "L": 1035e2,
-    "x0": 0,
-    "y0": 0,
-    "dX": 2 * 0.7e2,
-    "dY": 1.4e2,
-    "dZ": 2 * 0.7e2,
-    "norm": NuMI_tau_per_POT * 1e21 * 0.87,
-    "Emin": 0.1,
-    "final_states": ["ee", "em", "me", "mm", "gg"],
-}
-TwoByTwo_absorber_exp = {
-    "name": "2x2 protoDUNE-ND absorber",
-    "L": 1035e2 - 715e2,
-    "x0": 0,
-    "y0": 0,
-    "dX": 2 * 0.7e2,
-    "dY": 1.4e2,
-    "dZ": 2 * 0.7e2,
-    "norm": NuMI_tau_per_POT * 1e21 * 0.13,
-    "Emin": 0.1,
-    "final_states": ["ee", "em", "me", "mm", "gg"],
-}
+                # Try to convert to float or int if possible
+                try:
+                    if "." in value:
+                        value = float(value)
+                    else:
+                        value = int(value)
+                except ValueError:
+                    pass  # leave as string
 
-ArgoNeuT_exp = {
-    "name": "ArgoNeuT",
-    "L": 1033e2 - 63,
-    "x0": 0,
-    "y0": 0,
-    "dX": 0.40e2,
-    "dY": 0.47e2,
-    "dZ": 0.90e2 + 63,
-    "norm": NuMI_tau_per_POT * 1.25e20 * 0.5 * 0.87,  # for efficiency,
-    "Emin": 10,
-    "final_states": ["mm"],
-}
-ArgoNeuT_absorber_exp = {
-    "name": "ArgoNeuT_absorber",
-    "L": 1033e2 - 63 - 715e2,
-    "x0": 0,
-    "y0": 0,
-    "dX": 0.40e2,
-    "dY": 0.47e2,
-    "dZ": 0.90e2 + 63,
-    "norm": NuMI_tau_per_POT * 1.25e20 * 0.5 * 0.13,  # for efficiency,
-    "Emin": 10,
-    "final_states": ["mm"],
-}
+                attrs[key] = value
 
-CHARM_exp = {
-    "name": "CHARM",
-    "L": 480e2,
-    "x0": 5e2,
-    "y0": 0,
-    "dX": 3e2,
-    "dY": 3e2,
-    # "R": 1.5e2,
-    "dZ": 35e2,
-    "norm": SPS_tau_per_POT * 2.4e18,
-    "Emin": 1,
-    "final_states": ["ee", "em", "me", "mm", "gg"],
-}
-BEBC_exp = {
-    "name": "BEBC",
-    "L": 404e2,
-    "x0": 0,
-    "y0": 0,
-    "dX": 3.57e2,
-    "dY": 2.52e2,
-    "dZ": 1.85e2,
-    "norm": SPS_tau_per_POT * 2.72e18,
-    "Emin": 1,
-    "final_states": ["ee", "em", "me", "mm", "gg"],
-}
-NA62_exp = {
-    "name": "NA62",
-    "L": 79.4e2,
-    "x0": 0,
-    "y0": 0,
-    "dX": 2e2,
-    "dY": 2e2,
-    "dZ": 78e2,
-    "norm": SPS_tau_per_POT * 1.4e17,
-    "Emin": 1,
-    "final_states": ["ee", "mm"],
-}
-PROTO_DUNE_NP02_exp = {
-    "name": "ProtoDUNE-NP02",
-    "L": 677e2,
-    "x0": 3e2,
-    "y0": 1.5e2,
-    "dX": 6e2,
-    "dY": 7e2,
-    "dZ": 6e2,
-    "norm": SPS_tau_per_POT * 1.75e19,
-    "Emin": 1,
-    "final_states": ["ee", "em", "me", "mm", "gg"],
-}
-PROTO_DUNE_NP04_exp = {
-    "name": "ProtoDUNE-NP04",
-    "L": 723e2,
-    "x0": 3e2,
-    "y0": 1.5e2,
-    "dX": 6e2,
-    "dY": 7e2,
-    "dZ": 6e2,
-    "norm": SPS_tau_per_POT * 1.75e19,
-    "Emin": 1,
-    "final_states": ["ee", "em", "me", "mm", "gg"],
-}
-SHiP_exp = {
-    "name": "SHiP",
-    "L": 33.7e2,
-    "x0": 0,
-    "y0": 0,
-    "dX": 2.5e2,
-    "dY": 4.3e2,
-    "dZ": 49.6e2,
-    "norm": SPS_tau_per_POT * 6e20,
-    "Emin": 1,
-    "final_states": ["ee", "em", "me", "mm", "gg"],
-}
+    # Now read the events (skipping header)
+    df = (
+        pd.read_csv(file_path, sep=" ", skiprows=n_header_lines)
+        .shift(axis=1)
+        .iloc[:, 1:]
+    )
 
-sigma_tau = 25.95e-30  # cm^2
-FASER_exp = {
-    "name": "FASER",
-    "L": 480e2,
-    "x0": 6.5,
-    "y0": 0,
-    "R": 0.1e2,
-    "dZ": 1.5e2,
-    "norm": 150e39 * sigma_tau,
-    "Emin": 100,
-    "final_states": ["ee", "em", "me", "mm", "gg"],
-}
-FASER2_exp = {
-    "name": "FASER2",
-    "L": 480e2,
-    "x0": 0,
-    "y0": 0,
-    "R": 1e2,
-    "dZ": 5e2,
-    "norm": 3e42 * sigma_tau,
-    "Emin": 100,
-    "final_states": ["ee", "em", "me", "mm", "gg"],
-}
+    # Attach attributes
+    df.attrs.update(attrs)
+
+    return df
 
 
-def load_events(file_paths, as_dataframe=False, apply_BR_weights=True):
-    if not isinstance(file_paths, list):
-        file_paths = [file_paths]
+def load_events(
+    file_names,
+    as_dataframe=False,
+    apply_tauBR_weights=False,
+    apply_xsec_weights=True,
+):
+    """
+    Load tau events from Pythia8 or local pandas files.
+    """
+
+    # In-house Ds->tau files
+    if "parquet" in file_names:
+        # Read parquet file
+        df = pd.read_parquet(file_names)
+        return df
+
+    # Pythia8 files
+    if not isinstance(file_names, list):
+        files = glob.glob(f"{file_names}_*.txt")
+    else:
+        files = []
+        for file_name in file_names:
+            files += glob.glob(f"{file_name}_*.txt")
+
     # Check if the file paths exist
-    for file_path in file_paths:
+    for file_path in files:
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File not found: {file_path}")
+    nfiles = len(files)
+    if nfiles == 0:
+        raise FileNotFoundError(f"No files found matching pattern: {file_names}_*.txt")
 
-    PARENTS = [411, 431, 100443]
+    PARENTS = [
+        411,
+        431,
+        100443,
+    ]
     BRANCHINGS = [1.20e-3, 5.36e-2, 3.1e-3]
 
-    if as_dataframe:
-        # Initialize an empty DataFrame
-        df = pd.DataFrame()
-        particle_count = 0
-        event_count = 0
-        # Iterate over each file path, read the CSV file, and concatenate it to the existing DataFrame
-        for file_path in file_paths:
+    tau_soft = 0
+    tau_hard = 0
+
+    total_soft = 0
+    total_hard = 0
+
+    # Initialize an empty DataFrame
+    df = pd.DataFrame()
+    particle_count = 0
+    event_count = 0
+    # Iterate over each file path, read the CSV file, and concatenate it to the existing DataFrame
+    tot_tau_xsec = 0.0
+    tot_xsec_soft = 0.0
+    tot_xsec_hard = 0.0
+
+    for file_path in files:
+
+        if tau_hard > 500_000:
+            continue  # already plenty of QCDhard events!
+        try:
+            # Handle the case where the file is from my local runs (no headers at the time)
             df_new = pd.read_csv(file_path, sep=" ").shift(axis=1).iloc[:, 1:]
-            if "tau_event_number" in df_new.columns:
-                df_new.rename(
-                    columns={"tau_event_number": "particle_count"}, inplace=True
+        except pd.errors.ParserError:
+            # Handle the case where the file is from the cluster runs (includes headers)
+            df_new = read_pythia_file_with_attrs(file_path)
+
+        # Obsolete "tau_event_number" column name
+        if "tau_event_number" in df_new.columns:
+            df_new.rename(columns={"tau_event_number": "particle_count"}, inplace=True)
+
+        this_event_count = df_new.event_number.max()
+        this_particle_count = df_new.particle_count.max()
+
+        df_new.event_number = df_new.event_number + event_count
+        df_new.particle_count = df_new.particle_count + particle_count
+        event_count += this_event_count
+        particle_count += this_particle_count
+
+        tot_tau_xsec += df_new.attrs.get("tau_xsec_mb", 0.0) / len(files)
+
+        # NOTE: setting all weights to 1.0
+        if apply_xsec_weights:
+            df_new["weights"] = np.ones(len(df_new))
+            if df_new.attrs["mode"] == "hard":
+                tau_hard += this_particle_count
+                total_hard += this_event_count
+                tot_xsec_hard += df_new.attrs.get("total_xsec_mb", 0.0) / len(files)
+                # df_new["QCD"] = "h"
+            elif df_new.attrs["mode"] == "soft":
+                tau_soft += this_particle_count
+                total_soft += this_event_count
+                tot_xsec_soft += df_new.attrs.get("total_xsec_mb", 0.0) / len(files)
+                # df_new["QCD"] = "s"
+            else:
+                raise ValueError(
+                    f"Unknown file type: {file_path}. Expected 'hard' or 'soft' in the filename."
                 )
-            this_event_count = df_new.event_number.max()
-            this_particle_count = df_new.particle_count.max()
 
-            df_new.event_number = df_new.event_number + event_count
-            df_new.particle_count = df_new.particle_count + particle_count
-            event_count += this_event_count
-            particle_count += this_particle_count
-            df = pd.concat([df, df_new], ignore_index=True)
+            df_new["weights"] *= df_new.attrs.get("tau_xsec_mb", 0.0)
 
-        if apply_BR_weights:
-            df["weights"] = np.zeros(len(df))
+        if apply_tauBR_weights:
             for p, br in zip(PARENTS, BRANCHINGS):
-                mask = np.abs(df["mother_pid"]) == p
-                df.loc[mask, "weights"] = br
-        else:
-            df["weights"] = 1 / event_count
+                mask = np.abs(df_new["mother_pid"]) == p
+                df_new.loc[mask, "weights"] *= br
 
-        return df
-    else:
-        data = np.vstack(
-            [
-                # OLD
-                # event_number pid status mother1 mother2 daughter1 daughter2 E px py pz weight
-                # np.loadtxt(file, skiprows=1, usecols=(1, 7, 8, 9, 10, 11))
-                # NEW
-                # event_number particle_count pid E px py pz mother_pid E_mother px_mother py_mother pz_mother
-                np.loadtxt(file, skiprows=1, usecols=(2, 3, 4, 5, 6, 7, 7))
-                for file in file_paths
-            ]
+        # Concatenate
+        df = pd.concat([df, df_new], ignore_index=True)
+        df.attrs.update(df_new.attrs)
+        df.attrs["tau_xsec_mb"] = tot_tau_xsec
+        df.attrs["total_xsec_mb"] = tot_xsec_soft + tot_xsec_hard
+
+    if apply_xsec_weights:
+        df["weights"] = df["weights"] / (
+            total_hard * tot_xsec_hard + total_soft * tot_xsec_soft
         )
-        data[:, -1] = np.zeros(np.shape(data)[0])
-        if apply_BR_weights:
-            for p, br in zip(PARENTS, BRANCHINGS):
-                mask = np.abs(data[:, -2]) == p
-                data[mask, -1] = br
-        else:
-            data[:, -1] = np.ones(np.shape(data)[0])
-
-        return data
+    return df
 
 
 class Experiment:
-    def __init__(self, file_paths, exp_dic, alp=None, duplicate_taus=None):
+    def __init__(
+        self, file_paths, exp_dic, alp=None, duplicate_taus=None, savemem=True
+    ):
         """
         Initializes the experimental setup with the given parameters.
 
@@ -334,17 +217,21 @@ class Experiment:
 
         df_taus = load_events(file_paths)
         if duplicate_taus is not None:
-            if duplicate_taus >= 1:
-                df_taus = np.repeat(df_taus, duplicate_taus, axis=0)
-            else:
-                df_taus = df_taus[: int(duplicate_taus * df_taus.shape[0]), :]
+            # if duplicate_taus >= 1:
+            #     df_taus = np.repeat(df_taus, duplicate_taus, axis=0)
+            # else:
+            #     df_taus = df_taus[: int(duplicate_taus * df_taus.shape[0]), :]
 
-            # df_taus = pd.concat([df_taus] * duplicate_taus, ignore_index=True)
+            df_taus = pd.concat([df_taus] * duplicate_taus, ignore_index=True)
 
-        self.nevents = np.shape(df_taus)[0]
+        self.nevents = len(df_taus)
+        self.tau_weights = df_taus["weights"].to_numpy("float64", copy=False)
+        self.tau_weights /= self.tau_weights.sum()
+        self.p4_taus = df_taus[["E", "px", "py", "pz"]].to_numpy("float64", copy=False)
 
-        # self.tau_weights = df_taus.weight / df_taus.weight.sum()
-        self.tau_weights = df_taus[:, -1] / df_taus[:, -1].sum()
+        # self.nevents = np.shape(df_taus)[0]
+        # self.tau_weights = df_taus.weights / df_taus.weights.sum()
+        # # self.tau_weights = df_taus[:, -1] / df_taus[:, -1].sum()
         # self.p4_taus = np.array(
         #     [
         #         df_taus["E"],
@@ -353,14 +240,18 @@ class Experiment:
         #         df_taus["pz"],
         #     ]
         # ).T
-        self.p4_taus = np.array(
-            [
-                df_taus[:, 1],
-                df_taus[:, 2],
-                df_taus[:, 3],
-                df_taus[:, 4],
-            ]
-        ).T
+        # self.p4_taus = np.array(
+        #     [
+        #         df_taus[:, 1],
+        #         df_taus[:, 2],
+        #         df_taus[:, 3],
+        #         df_taus[:, 4],
+        #     ]
+        # ).T
+        self.savemem = savemem
+        if not savemem:
+            self.df_taus = df_taus
+        del df_taus
 
         # All experimental attributes
         required_keys = ["name", "L", "dZ", "norm", "Emin", "final_states"]
@@ -399,6 +290,17 @@ class Experiment:
         self.tau_BRs = {}
         self.event_rate = self.get_event_rate(self.alp)
 
+    def get_parent_p4(self):
+        p4_parent = np.array(
+            [
+                self.df_taus["E_mother"],
+                self.df_taus["px_mother"],
+                self.df_taus["py_mother"],
+                self.df_taus["pz_mother"],
+            ]
+        ).T
+        return p4_parent
+
     def sample_alp_energy_spectrum(self, production_channel, alp):
         # ECM_alp = Cfv.random_generator(
         #     self.nevents, alp.Ea_min[production_channel], alp.Ea_max[production_channel]
@@ -408,7 +310,58 @@ class Experiment:
         )
         return ECM_alp
 
-    def generate_alp_events(self, alp, production_channel):
+    def sample_alp_daughter_4momenta(self, decay_channel, alp):
+        # Flat dOmega = dcos(theta) * dphi
+        phi_1 = np.random.uniform(0, 2 * np.pi, self.nevents)
+        ctheta_1 = np.random.uniform(-1, 1, self.nevents)
+
+        m1 = models.LEPTON_MASSES[models.LEPTON_INDEX[decay_channel[0]]]
+        m2 = models.LEPTON_MASSES[models.LEPTON_INDEX[decay_channel[1]]]
+
+        # Sampling ALP energy from different production channels
+        ECM_1 = (
+            np.ones(self.nevents)
+            * (alp.m_a**2 + m1**2 - m2**2)
+            / 2
+            / np.sqrt(2 * alp.m_a)
+        )
+        ECM_2 = (
+            np.ones(self.nevents)
+            * (alp.m_a**2 - m1**2 + m2**2)
+            / 2
+            / np.sqrt(2 * alp.m_a)
+        )
+
+        pCM_1 = np.zeros_like(ECM_1)
+        pCM_1[ECM_1 > m1] = np.sqrt(ECM_1[ECM_1 > m1] ** 2 - m1**2)
+
+        pCM_2 = np.zeros_like(ECM_2)
+        pCM_2[ECM_2 > m2] = np.sqrt(ECM_2[ECM_2 > m2] ** 2 - m2**2)
+
+        # Build ALP 4 momenta
+        p4_CM_1 = Cfv.build_fourvec(ECM_1, pCM_1, ctheta_1, phi_1)
+        p4_CM_2 = Cfv.build_fourvec(ECM_2, -pCM_1, ctheta_1, phi_1)
+
+        ctheta_alp_LAB = Cfv.get_cosTheta(self.p4_alp)
+        phi_alp_LAB = np.arctan2(self.p4_alp[:, 2], self.p4_alp[:, 1])
+        beta = -np.sqrt(1 - (alp.m_a / self.p4_alp[:, 0]) ** 2)
+        beta[beta < -1] = -1
+        p4_1 = Cfv.Tinv(
+            p4_CM_1,
+            beta,
+            ctheta_alp_LAB,
+            phi_alp_LAB,
+        )
+        p4_2 = Cfv.Tinv(
+            p4_CM_2,
+            beta,
+            ctheta_alp_LAB,
+            phi_alp_LAB,
+        )
+
+        return p4_1, p4_2
+
+    def generate_alp_events(self, alp, production_channel, decay_channel):
         """
         Generate ALP events for a given tau decay channel
         """
@@ -426,16 +379,21 @@ class Experiment:
 
         # Build ALP 4 momenta
         p4_alp_CM = Cfv.build_fourvec(ECM_alp, pCM_alp, ctheta_alp, phi_alp)
-        self.p_taus = Cfv.get_3vec_norm(self.p4_taus)
+        p_taus = Cfv.get_3vec_norm(self.p4_taus)
         ctheta_tau_LAB = Cfv.get_cosTheta(self.p4_taus)
         phitau_LAB = np.arctan2(self.p4_taus[:, 2], self.p4_taus[:, 1])
-        beta = -self.p_taus / self.p4_taus[:, 0]
+        beta = -p_taus / self.p4_taus[:, 0]
         beta[beta < -1] = -1
+
         self.p4_alp = Cfv.Tinv(
             p4_alp_CM,
             beta,
             ctheta_tau_LAB,
             phitau_LAB,
+        )
+
+        self.p4_1, self.p4_2 = self.sample_alp_daughter_4momenta(
+            decay_channel=decay_channel, alp=alp
         )
 
         # Total tau branching ratio
@@ -450,7 +408,7 @@ class Experiment:
 
         self.weights = self.tau_weights * self.tau_BRs[production_channel]
 
-        return self.p4_alp, self.weights
+        return self.p4_1, self.p4_2, self.weights
 
     def get_alp_events(self, alp=None):
         """
@@ -466,28 +424,45 @@ class Experiment:
             "tau>nu+nu+e+a",
             "tau>nu+nu+mu+a",
         ]
-        p4_list = []
+        p1_list = []
+        p2_list = []
         weights_list = []
-        channel_list = []
+        # channel_list = []
 
-        for channel in production_channels:
-            if alp.tau_BR(channel) > 0:
-                p4, weights = self.generate_alp_events(alp, channel)
-                p4_list.append(p4)
-                weights_list.append(weights)
-                channel_list.append(np.repeat(channel, len(weights)))
+        for prod_channel in production_channels:
+            for decay_channel in self.final_states:
 
-                # Break if LFV channels available and non-zero
-                if p4_list and channel == "tau>mu+a":
-                    break
+                if (
+                    alp.tau_BR(prod_channel) > 0
+                    and vars(alp)[f"BR_a_to_{decay_channel}"] > 0
+                ):
+                    p1, p2, weights = self.generate_alp_events(
+                        alp, prod_channel, decay_channel
+                    )
+                    p1_list.append(p1)
+                    p2_list.append(p2)
+                    weights_list.append(weights)
+                    # channel_list.append(
+                    #     np.repeat(prod_channel + "_a>" + decay_channel, len(weights))
+                    # )
 
-        if p4_list:
-            self.p4_alp = np.concatenate(p4_list, axis=0)
+                    # Break if LFV channels available and non-zero
+                    if p1_list and prod_channel == "tau>mu+a":
+                        break
+
+        if p1_list:
+            self.p4_daughter1 = np.concatenate(p1_list, axis=0)
+            self.p4_daughter2 = np.concatenate(p2_list, axis=0)
             self.weights = np.concatenate(weights_list)
-            self.channel_list = np.concatenate(channel_list)
+            # self.channel_list = np.concatenate(channel_list)
         else:
-            self.p4_alp = np.array([])
+            self.p4_daughter1 = np.array([])
+            self.p4_daughter2 = np.array([])
             self.weights = np.array([])
+
+        del p1, p2, weights, p1_list, p2_list, weights_list
+
+        self.p4_alp = self.p4_daughter1 + self.p4_daughter2
 
         # 3-momentum absolute value
         # self.p_alp = np.zeros_like(self.p4_alp[:, 0])
@@ -496,51 +471,103 @@ class Experiment:
         self.p_alp = Cfv.get_3vec_norm(self.p4_alp)
 
         # ALP velocity
-        self.v_alp = Cfv.get_3direction(self.p4_alp)
+        v_alp = Cfv.get_3direction(self.p4_alp)
+        v_daughter1 = Cfv.get_3direction(self.p4_daughter1)
+        v_daughter2 = Cfv.get_3direction(self.p4_daughter2)
+
+        # random sample the ALP decay position according to its lifetime
+        # dec_length = const.get_decay_rate_in_cm(self.alp.Gamma_a) * self.p_alp / alp.m_a
+        # self.z_alp = self.L + np.random.exponential(scale=dec_length, size=np.shape(self.x_alp))
+
+        # uniformly sample the ALP decay position inside detector (to be reweighted later)
+        self.z_alp = np.random.uniform(
+            self.L, self.L + self.dZ, size=np.shape(self.p_alp)
+        )
 
         # projected x,y at the plane of the detector
-        self.x_alp = self.v_alp[:, 0] * self.L
-        self.y_alp = self.v_alp[:, 1] * self.L
+        self.x_alp = v_alp[:, 0] * self.z_alp
+        self.y_alp = v_alp[:, 1] * self.z_alp
 
-        return self.p4_alp, self.weights, self.channel_list
+        self.x_daughter1_exit = self.x_alp + v_daughter1[:, 0] * (
+            self.L + self.dZ - self.z_alp
+        )
+        self.y_daughter1_exit = self.y_alp + v_daughter1[:, 1] * (
+            self.L + self.dZ - self.z_alp
+        )
+
+        self.x_daughter2_exit = self.x_alp + v_daughter2[:, 0] * (
+            self.L + self.dZ - self.z_alp
+        )
+        self.y_daughter2_exit = self.y_alp + v_daughter2[:, 1] * (
+            self.L + self.dZ - self.z_alp
+        )
+
+        del v_alp, v_daughter1, v_daughter2
+
+        return self.p4_alp, self.weights  # , self.channel_list
 
     def get_alps_in_acceptance(self, generate_events=True, alp=None):
 
         if generate_events or hasattr(self, "p4_alp") is False:
-            self.p4_alp, self.weights, self.channels = self.get_alp_events(alp=alp)
+            self.get_alp_events(alp=alp)
 
-        # if hasattr(self, "theta0"):
-        #     theta_alp = np.arccos(Cfv.get_cosTheta(self.p4_alp))
-        #     self.mask_alp_in_acc = (self.theta0 - self.dtheta / 2 < theta_alp) & (
-        #         theta_alp < self.theta0 + self.dtheta / 2
-        #     )
-        #     self.signal_selection = self.p4_alp[:, 0] > self.Emin
-        #     self.eff = (
-        #         self.dphi
-        #         / np.pi
-        #         * self.weights[self.signal_selection].sum()
-        #         / self.weights.sum()
-        #     )
-        # else:
-
-        # NOTE: Selection of events in a square
-        # NOTE: Assume a cuboid... need to extend for SHiP
+        # NOTE: Selection of events in a square assuming a cuboid
         if hasattr(self, "R"):
-            self.mask_alp_in_acc = (
-                ((self.x_alp - self.x0) ** 2 + (self.y_alp - self.y0) ** 2) < self.R**2
-            ) & (self.p4_alp[:, 0] > self.Emin)
+            if self.active_volume:
+                self.mask_alp_in_acc = (
+                    (
+                        (
+                            (self.x_daughter1_exit - self.x0) ** 2
+                            + (self.y_daughter1_exit - self.y0) ** 2
+                        )
+                        < self.R**2
+                    )
+                    & (
+                        (
+                            (self.x_daughter2_exit - self.x0) ** 2
+                            + (self.y_daughter2_exit - self.y0) ** 2
+                        )
+                        < self.R**2
+                    )
+                    & (self.p4_daughter1[:, 0] > self.Emin / 2)
+                    & (self.p4_daughter2[:, 0] > self.Emin / 2)
+                )
+            else:
+                self.mask_alp_in_acc = (
+                    (
+                        ((self.x_alp - self.x0) ** 2 + (self.y_alp - self.y0) ** 2)
+                        < self.R**2
+                    )
+                    & (self.p4_daughter1[:, 0] > self.Emin / 2)
+                    & (self.p4_daughter2[:, 0] > self.Emin / 2)
+                )
+
         else:
-            self.mask_alp_in_acc = (
-                (np.abs(self.x_alp - self.x0) < self.dX / 2)
-                & (np.abs(self.y_alp - self.y0) < self.dY / 2)
-                & (self.p4_alp[:, 0] > self.Emin)
-            )
+            if self.active_volume:
+                self.mask_alp_in_acc = (
+                    (
+                        ((np.abs(self.x_daughter1_exit - self.x0)) < self.dX / 2)
+                        & ((np.abs(self.y_daughter1_exit - self.y0)) < self.dY / 2)
+                        & ((np.abs(self.x_daughter2_exit - self.x0)) < self.dX / 2)
+                        & ((np.abs(self.y_daughter2_exit - self.y0)) < self.dY / 2)
+                    )
+                    & (self.p4_daughter1[:, 0] > self.Emin / 2)
+                    & (self.p4_daughter2[:, 0] > self.Emin / 2)
+                )
+            else:
+                self.mask_alp_in_acc = (
+                    (np.abs(self.x_alp - self.x0) < self.dX / 2)
+                    & (np.abs(self.y_alp - self.y0) < self.dY / 2)
+                    & (self.p4_daughter1[:, 0] > self.Emin / 2)
+                    & (self.p4_daughter2[:, 0] > self.Emin / 2)
+                )
+
         self.eff = self.weights[self.mask_alp_in_acc].sum() / self.weights.sum()
 
         return (
             self.p4_alp[self.mask_alp_in_acc],
             self.weights[self.mask_alp_in_acc],
-            self.channel_list[self.mask_alp_in_acc],
+            # self.channel_list[self.mask_alp_in_acc],
         )
 
     def get_alp_momentum_spectrum(
@@ -556,7 +583,7 @@ class Experiment:
 
         if generate_events:
             # Get ALP events for all channels
-            self.p4_alp, self.weights, self.channels = self.get_alp_events(alp=alp)
+            self.get_alp_events(alp=alp)
             self.get_alps_in_acceptance(alp=alp)
 
         # If less than 3 generated events were within acceptance, dont even try to compute rate
@@ -606,13 +633,16 @@ class Experiment:
 
         self.flux = self.norm * self.weights[self.mask_alp_in_acc]
         self.p4_alp_in_acc = self.p4_alp[self.mask_alp_in_acc]
-        self.channel_list_inc_acc = self.channel_list[self.mask_alp_in_acc]
+        # self.channel_list_inc_acc = self.channel_list[self.mask_alp_in_acc]
         self.total_rate = np.sum(self.flux * self.get_signal_prob_decay(alp))
+
+        if self.savemem:
+            del self.p4_alp
+            del self.p4_daughter1
+            del self.p4_daughter2
+            del self.p_alp
+
         return self.total_rate
-        #     np.sum(
-        #     self.dPhidp
-        #     * alp.prob_decay(self.pc, self.L, self.dZ)
-        # )
 
     def get_signal_prob_decay(self, alp, mask=None):
         """Calculate the probability of decay for a given ALP momentum and distance"""

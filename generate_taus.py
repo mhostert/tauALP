@@ -3,7 +3,9 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import argparse
 
 
-def run_simulation(num_events, base_filename, beam_energy, soft_or_hard, pTcut, seed):
+def run_simulation(
+    num_events, base_filename, beam_energy, soft_or_hard, pTcut, seed, beam_type
+):
     # Execute the C++ program with the base filename and the number of events as command line arguments
     command = [
         "./ntaus",
@@ -13,6 +15,7 @@ def run_simulation(num_events, base_filename, beam_energy, soft_or_hard, pTcut, 
         str(soft_or_hard),
         str(pTcut),
         str(seed),
+        str(beam_type),
     ]
     result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -21,9 +24,6 @@ def run_simulation(num_events, base_filename, beam_energy, soft_or_hard, pTcut, 
         print(f"Error with {base_filename}: {result.stderr.decode()}")
     else:
         print(f"Completed: {base_filename} with {num_events} events")
-
-
-N_EVENTS = 100_000
 
 
 def main():
@@ -48,6 +48,12 @@ def main():
         help="whether to simulate with soft or hard QCD events. Options are 'soft', 'hard', or 'both'.",
     )
     parser.add_argument(
+        "--beam_type",
+        type=str,
+        required=True,
+        help="whether to simulate a fixed target or collider setup. Options are 'fixed' or 'collider'.",
+    )
+    parser.add_argument(
         "--pTcut",
         type=str,
         required=False,
@@ -60,6 +66,13 @@ def main():
         required=False,
         default="666",
         help="integer seed for Pythia. Each event file will have seed = (seed+i) as an input, where i is the generator index (0 to n_cores).",
+    )
+    parser.add_argument(
+        "--n_events",
+        type=str,
+        required=False,
+        default=1000,
+        help="Number of tau events to generate with Pythia for each job.",
     )
     args = parser.parse_args()
     # Configuration for different runs
@@ -76,12 +89,13 @@ def main():
         futures = [
             executor.submit(
                 run_simulation,
-                N_EVENTS,  # number of events
+                args.n_events,  # number of events
                 args.name + "_" + task[0],  # file names (0 - n_cores)
                 str(args.beam_energy),
                 args.soft_or_hard,
                 args.pTcut,
                 task[1],  # seed
+                args.beam_type,
             )
             for task in tasks
         ]

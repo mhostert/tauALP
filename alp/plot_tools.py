@@ -17,7 +17,7 @@ import scipy
 
 from . import const
 from alp.models import ALP
-
+from alp.gminus2 import DELTA_COMBINED_2023_SM_2025, DELTA_a_electron_LKB
 
 ###########################
 #
@@ -40,6 +40,17 @@ rc("text", usetex=True)
 rc("font", **{"family": "serif", "serif": ["Computer Modern Roman"]})
 matplotlib.rcParams["hatch.linewidth"] = 0.3
 
+# CB_color_cycle = [
+#     "#377eb8",
+#     "#f781bf",
+#     "#4daf4a",
+#     "#999999",
+#     "#ff7f00",
+#     "#a65628",
+#     "#984ea3",
+#     "#e41a1c",
+#     "#dede00",
+# ]
 CB_color_cycle = [
     "#377eb8",
     "#ff7f00",
@@ -405,7 +416,7 @@ def lighten_color(color, amount=0.5):
     """
     try:
         c = mc.cnames[color]
-    except:
+    except KeyError:
         c = color
     c = colorsys.rgb_to_hls(*mc.to_rgb(c))
     return colorsys.hls_to_rgb(c[0], 1 - amount * (1 - c[1]), c[2])
@@ -460,6 +471,565 @@ class MulticolorPatchHandler(object):
 
         handlebox.add_artist(patch)
         return patch
+
+
+def main_plot_LFV(
+    BP_NAME,
+    c_lepton,
+    c_NN,
+    mN,
+    fa_power=1,
+    plot_DUNEs=True,
+    figsize=(5, 6),
+    ymax=1e-3,
+    ymin=1e-10,
+    xmin=1e-2,
+    xmax=2,
+    ncol=1,
+    loc="lower left",
+    yscale="log",
+    xscale="log",
+    legend=True,
+    name_modifier="",
+    vlines=True,
+    title=None,
+    smear_stddev=False,
+    linewidth=0,
+    annotate=False,
+    plot_other=False,
+):
+
+    fig, ax = std_fig(figsize=figsize)
+
+    plot_other_limits(
+        ax, c_lepton=c_lepton, c_NN=c_NN, mN=mN, linewidth=linewidth, annotate=annotate
+    )
+
+    # labels for legend
+    labels = []
+    labelnames = []
+    name = BP_NAME
+
+    Nsig = 2.3
+    X, Y, Z = np.load(f"data/CHARM_rates{name}.npy", allow_pickle=True)
+    c = ax.contourf(
+        X,
+        Y**fa_power,
+        Z,
+        levels=[Nsig, 1e100],
+        colors=[lighten_color(CB_color_cycle[0], 0.5)],
+        alpha=1,
+        zorder=-0.2,
+    )
+    _ = ax.contour(
+        X,
+        Y**fa_power,
+        Z,
+        levels=[Nsig],
+        colors=CB_color_cycle[0],
+        linestyles="-",
+        linewidths=[1],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append("CHARM")
+
+    X, Y, Z = np.load(f"data/BEBC_rates{name}.npy", allow_pickle=True)
+    c = ax.contourf(
+        X,
+        Y**fa_power,
+        Z,
+        levels=[Nsig, 1e100],
+        colors=[lighten_color(CB_color_cycle[1], 0.5)],
+        alpha=1,
+        zorder=-0.1,
+    )
+    _ = ax.contour(
+        X,
+        Y**fa_power,
+        Z,
+        levels=[Nsig],
+        colors=CB_color_cycle[1],
+        linestyles="-",
+        linewidths=[1],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append("BEBC")
+
+    X, Y, Z = np.load(f"data/NoVA_rates{name}.npy", allow_pickle=True)
+    # c = ax.contourf(X, Y**fa_power, Z, levels=[Nsig, 1e100], colors=[lighten_color('darkorange', 0.5)], alpha=1, zorder=1.3)
+    c = ax.contour(
+        X,
+        Y**fa_power,
+        Z,
+        levels=[Nsig],
+        colors=CB_color_cycle[3],
+        linestyles=[(1, (2, 0))],
+        linewidths=[1.75],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append("NOvA")
+
+    X, Y, Z = np.load(f"data/MicroBooNE_rates{name}.npy", allow_pickle=True)
+    # c = ax.contourf(X, Y**fa_power, Z, levels=[Nsig, 1e100], colors=[lighten_color('black', 0.5)], alpha=1, zorder=1.2)
+    c = ax.contour(
+        X,
+        Y**fa_power,
+        Z,
+        levels=[Nsig],
+        colors=CB_color_cycle[3],
+        linestyles=[
+            (
+                1,
+                (
+                    2,
+                    1,
+                ),
+            )
+        ],
+        linewidths=[1.75],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append("$\mu$BooNE (NuMI)")
+
+    X, Y, Z = np.load(f"data/ICARUS_rates{name}.npy", allow_pickle=True)
+    # c = ax.contourf(X, Y**fa_power, Z, levels=[Nsig, 1e100], colors=[lighten_color('black', 0.5)], alpha=1, zorder=1.1)
+    c = ax.contour(
+        X,
+        Y**fa_power,
+        Z,
+        levels=[Nsig],
+        colors=CB_color_cycle[3],
+        linestyles=[(1, (4, 1))],
+        linewidths=[1.75],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append("ICARUS (NuMI)")
+
+    X1, Y1, Z1 = np.load(f"data/ProtoDUNE-NP02_rates{name}.npy", allow_pickle=True)
+    _, _, Z2 = np.load(f"data/ProtoDUNE-NP02_rates{name}.npy", allow_pickle=True)
+    X, Y, Z = X1, Y1, Z1 + Z2
+    c = ax.contour(
+        X,
+        Y**fa_power,
+        Z,
+        levels=[Nsig],
+        colors=CB_color_cycle[0],
+        linestyles=[(1, (3, 2))],
+        linewidths=[1.75],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append(r"Proto-DUNE")
+
+    if plot_DUNEs:
+        X, Y, Z = np.load(f"data/DUNE-ND_rates{name}.npy", allow_pickle=True)
+        c = ax.contour(
+            X,
+            Y**fa_power,
+            Z,
+            levels=[Nsig],
+            colors="limegreen",
+            linestyles=[(1, (1, 0))],
+            linewidths=[1.75],
+            alpha=1,
+            zorder=2,
+        )
+        labels.append(c.legend_elements()[0][0])
+        labelnames.append(r"DUNE ND")
+
+        # X1,Y1,Z1 = np.load(f'data/2x2 protoDUNE-ND_rates{name}.npy', allow_pickle=True)
+        # _,_,Z2 = np.load(f'data/2x2 protoDUNE-ND absorber_rates{name}.npy', allow_pickle=True)
+        # X,Y,Z = X1, Y1, Z1+Z2
+        # if smear:
+        #     Z = scipy.ndimage.filters.gaussian_filter(Z, smear_stddev, mode="nearest", order=0, cval=0)
+        # # c = ax.contourf(X, Y**fa_power, Z, levels=[Nsig, 1e100], colors=[lighten_color('green', 0.5)], alpha=1, zorder=-0.1)
+        # c = ax.contour(X, Y**fa_power, Z, levels=[Nsig], colors=[lighten_color('green', 0.5)], linewidths=[1.75], alpha=1, zorder=2)
+        # labels.append(c.legend_elements()[0][0])
+        # labelnames.append(r'DUNE 2x2')
+
+    # X1,Y1,Z1 = np.load(f'data/ArgoNeuT_rates{name}.npy', allow_pickle=True)
+    # _,_,Z2 = np.load(f'data/ArgoNeuT_absorber_rates{name}.npy', allow_pickle=True)
+    # X,Y,Z = X1, Y1, Z1+Z2
+    # if smear:
+    #     Z = scipy.ndimage.filters.gaussian_filter(Z, smear_stddev, mode="nearest", order=0, cval=0)
+    # c = ax.contourf(X, Y**fa_power, Z, levels=[3, 1e100], colors=[lighten_color('green', 0.5)], alpha=1, zorder=-0.1)
+    # _ = ax.contour(X, Y**fa_power, Z, levels=[3], colors='green', linewidths=[1.75], alpha=1, zorder=2)
+    # labels.append(c.legend_elements()[0][0])
+    # labelnames.append(r'ArgoNeuT (ours)')
+
+    X, Y, Z = np.load(f"data/FASER_rates{name}.npy", allow_pickle=True)
+    # c = ax.contourf(X, Y**fa_power, Z, levels=[Nsig, 1e100], colors=[lighten_color='black', 0.95)], alpha=1, zorder=1.91)
+    c = ax.contour(
+        X,
+        Y**fa_power,
+        Z,
+        levels=[Nsig],
+        colors="black",
+        linestyles=[(0, (2, 2))],
+        linewidths=[1.5],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append("FASER")
+
+    X, Y, Z = np.load(f"data/FASER2_rates{name}.npy", allow_pickle=True)
+    c = ax.contour(
+        X,
+        Y**fa_power,
+        Z,
+        levels=[Nsig],
+        colors="black",
+        linestyles=[(1, (5, 1))],
+        linewidths=[1.5],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append(r"FASER-2")
+
+    X, Y, Z = np.load(f"data/SHiP_rates{name}.npy", allow_pickle=True)
+    c = ax.contour(
+        X,
+        Y**fa_power,
+        Z,
+        levels=[Nsig],
+        colors="black",
+        linestyles="-",
+        linewidths=[1.75],
+        alpha=1,
+        zorder=2,
+    )
+    # x,y = c.collections[0].get_paths()[0].vertices[:,0],c.collections[0].get_paths()[0].vertices[:,1]
+    # # x=np.append([1e-2], x)
+    # # y=np.append([1e-2], y)
+    # x,y=plot_closed_region((x,y), logx=True, logy=True)
+    # c = ax.plot(x,y, edgecolor='black', facecolor='None', linestyle='-', linewidth=1.75, alpha=1, zorder=2)
+    # labels.append(c[0])
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append(r"SHiP")
+
+    # ma, fa = np.genfromtxt(f"digitized/NuMI_{BP_NAME}.dat", delimiter=" ", unpack=True)
+    # x, y = get_ordered_closed_region([ma, 1/fa], logx=True, logy=True)
+    # labels.append(ax.fill(x,y, facecolor='None', edgecolor='red', linestyle='--', alpha=1, lw=1.5, label='Bertuzzo et al (2022)')[0])
+    # labelnames.append(r'ArgoNeuT (Bertuzzo et al)')
+
+    if legend:
+        ax.legend(
+            labels,
+            labelnames,
+            loc=loc,
+            fontsize=9,
+            ncol=ncol,
+            frameon=False,
+            framealpha=0.7,
+            edgecolor="None",
+            fancybox=True,
+            handlelength=2.5,
+            handletextpad=0.5,
+            labelspacing=0.5,
+            borderpad=0.5,
+            columnspacing=0.75,
+        )
+
+    if not title:
+        if c_lepton[0, 0] != c_lepton[0, 2]:
+            title = r"{\bf LFV hierarchy} $\,\,\vert\,\,$"
+            # ax.annotate(r'\noindent \bf LFV hierarchy', xy=(0.02, 0.98), xycoords='axes fraction', fontsize=11, ha='left', va='top')
+            title += rf"$g_{{\ell \ell}} = {int(c_lepton[0,0])}$"
+            title += rf"$\,\,\vert\,\, g_{{e\mu}} = g_{{e\tau}} = g_{{\mu\tau}} = {sci_notation(c_lepton[1,2], notex=True, precision=0)}$"
+            # title+=rf'$\,\,\vert\,\, g_{{e\mu}} = \lambda^2 $'
+            # title+=rf'$\,\,\vert\,\, \lambda = {sci_notation(c_lepton[1,2], notex=True, precision=0)}$'
+            # title+=rf'$\,\,\vert\,\, g_{{(e,\mu)\tau}} = {sci_notation(c_lepton[1,2], notex=True, precision=1)}$'
+
+        elif c_lepton[0, 0] == c_lepton[0, 2]:
+            title = r"{\bf LFV anarchy} $\,\,\vert\,\,$"
+            # ax.annotate(r'\noindent \bf LFV anarchy', xy=(0.02, 0.98), xycoords='axes fraction', fontsize=11, ha='left', va='top')
+            title += rf"$g_{{\ell_1 \ell_2}} = {int(c_lepton[0,0])}$"
+    ax.set_title(title, fontsize=11, pad=7.5)
+
+    ax.set_yscale(yscale)
+    ax.set_xscale(xscale)
+    ax.set_ylabel(rf"$f_a^{{{-fa_power}}}$ [GeV$^{{{-fa_power}}}$]")
+    ax.set_xlabel(r"$m_a$ [GeV]")
+
+    # ax.set_ylim(1e-10/2,1e-4)
+    ax.set_ylim(ymin**fa_power, ymax**fa_power)
+    ax.set_xlim(xmin, xmax)
+
+    # ax.vlines(const.m_tau - const.m_e, ymin, ymax, color='black', linestyle='--', lw=0.5)
+    # ax.annotate(r'$m_{\tau} - m_e$', (1.1*(const.m_tau - const.m_e), ymax/1.1), fontsize=9.5, ha='center', va='top', rotation=90)
+
+    # ax.vlines(const.m_tau - const.m_mu, ymin, ymax, color='black', linestyle='--', lw=0.5)
+    # ax.annotate(r'$m_{\tau} - m_\mu$', (0.92*(const.m_tau - const.m_mu), ymax/1.1), fontsize=9.5, ha='center', va='top', rotation=90)
+
+    if vlines:
+        ax.vlines(2 * const.m_mu, ymin, ymax, color="grey", linestyle="--", lw=0.5)
+        ax.annotate(
+            r"$2 m_\mu$",
+            (0.92 * (2 * const.m_mu), ymax / 5),
+            fontsize=9.5,
+            ha="center",
+            va="bottom",
+            rotation=90,
+            color="grey",
+        )
+
+        ax.vlines(
+            const.m_mu + const.m_e, ymin, ymax, color="grey", linestyle="--", lw=0.5
+        )
+        ax.annotate(
+            r"$m_\mu + m_e$",
+            (0.92 * (const.m_mu + const.m_e), ymax / 5),
+            fontsize=9.5,
+            ha="center",
+            va="bottom",
+            rotation=90,
+            color="grey",
+        )
+
+    # title+=rf'$\,\vert\, m_{{\psi}} = {mN}$'
+    # ax.grid(which='both')
+
+    fig.savefig(
+        f"plots/ALP_benchmark_{name}{name_modifier}.pdf", bbox_inches="tight", dpi=400
+    )
+    return fig, ax
+
+
+def main_plot_LFC(
+    BP_NAME,
+    c_lepton,
+    fa_power=1,
+    plot_DUNEs=True,
+    figsize=(5, 5),
+    ymax=1e-3,
+    ymin=1e-10,
+    xmin=1e-2,
+    xmax=2,
+    ncol=1,
+    loc="upper right",
+    yscale="log",
+    xscale="log",
+    legend=True,
+    name_modifier="",
+    vlines=True,
+    linewidth=0.5,
+):
+
+    fig, ax = std_fig(figsize=figsize)
+
+    plot_other_limits_LFC(ax, linewidth=linewidth, c_lepton=c_lepton)
+
+    # labels for legend
+    labels = []
+    labelnames = []
+    name = BP_NAME
+
+    Nsig = 2.3
+    X, Y, Z = np.load(f"data/CHARM_rates{name}.npy", allow_pickle=True)
+    c = ax.contourf(
+        X,
+        Y**fa_power,
+        Z,
+        levels=[Nsig, 1e100],
+        colors=[lighten_color(CB_color_cycle[0], 0.5)],
+        alpha=1,
+        zorder=1.2,
+    )
+    _ = ax.contour(
+        X,
+        Y**fa_power,
+        Z,
+        levels=[Nsig],
+        colors=CB_color_cycle[0],
+        linestyles="-",
+        linewidths=[1],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append("CHARM")
+
+    X, Y, Z = np.load(f"data/BEBC_rates{name}.npy", allow_pickle=True)
+    c = ax.contourf(
+        X,
+        Y**fa_power,
+        Z,
+        levels=[Nsig, 1e100],
+        colors=[lighten_color(CB_color_cycle[1], 0.5)],
+        alpha=1,
+        zorder=1.2,
+    )
+    _ = ax.contour(
+        X,
+        Y**fa_power,
+        Z,
+        levels=[Nsig],
+        colors=CB_color_cycle[1],
+        linestyles="-",
+        linewidths=[1],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append("BEBC")
+
+    X1, Y1, Z1 = np.load(f"data/ProtoDUNE-NP02_rates{name}.npy", allow_pickle=True)
+    _, _, Z2 = np.load(f"data/ProtoDUNE-NP02_rates{name}.npy", allow_pickle=True)
+    X, Y, Z = X1, Y1, Z1 + Z2
+    c = ax.contour(
+        X,
+        Y**fa_power,
+        Z,
+        levels=[Nsig],
+        colors=CB_color_cycle[0],
+        linestyles=[(1, (3, 2))],
+        linewidths=[1.75],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append(r"ProtoDUNE")
+
+    if plot_DUNEs:
+        X, Y, Z = np.load(f"data/DUNE-ND_rates{name}.npy", allow_pickle=True)
+        c = ax.contour(
+            X,
+            Y**fa_power,
+            Z,
+            levels=[Nsig],
+            colors="limegreen",
+            linestyles=[(1, (1, 0))],
+            linewidths=[1.75],
+            alpha=1,
+            zorder=2,
+        )
+        labels.append(c.legend_elements()[0][0])
+        labelnames.append(r"DUNE ND")
+
+        # X,Y,Z = np.load(f'data/2x2 protoDUNE-ND_rates{name}.npy', allow_pickle=True)
+        # if smear:
+        #     Z = scipy.ndimage.filters.gaussian_filter(Z, smear_stddev, mode="nearest", order=0, cval=0)
+        # c = ax.contour(X, Y**fa_power, Z, levels=[Nsig], colors='red', linestyles=[(1,(1,1))], linewidths=[1.75], alpha=1, zorder=2)
+        # labels.append(c.legend_elements()[0][0])
+        # labelnames.append(r'2x2 protoDUNE ND')
+
+    # X,Y,Z = np.load(f'data/FASER_rates{name}.npy', allow_pickle=True)
+    # if smear:
+    #     Z = scipy.ndimage.filters.gaussian_filter(Z, 2*smear_stddev, mode="nearest", order=0, cval=0)
+    # # c = ax.contourf(X, Y**fa_power, Z, levels=[Nsig, 1e100], colors=[lighten_color='black', 0.95)], alpha=1, zorder=1.91)
+    # c = ax.contour(X, Y**fa_power, Z, levels=[Nsig], colors='black', linestyles=[(0,(2,2))], linewidths=[1.5], alpha=1, zorder=2)
+    # labels.append(c.legend_elements()[0][0])
+    # labelnames.append('FASER')
+
+    X, Y, Z = np.load(f"data/FASER2_rates{name}.npy", allow_pickle=True)
+    c = ax.contour(
+        X,
+        Y**fa_power,
+        Z,
+        levels=[Nsig],
+        colors="black",
+        linestyles=[(1, (5, 1))],
+        linewidths=[1.5],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append(r"FASER-2")
+
+    X, Y, Z = np.load(f"data/SHiP_rates{name}.npy", allow_pickle=True)
+    c = ax.contour(
+        X,
+        Y**fa_power,
+        Z,
+        levels=[Nsig],
+        colors="black",
+        linestyles="-",
+        linewidths=[1.75],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append(r"SHiP")
+
+    if legend:
+        ax.legend(
+            labels,
+            labelnames,
+            loc=loc,
+            fontsize=9,
+            ncol=ncol,
+            frameon=False,
+            framealpha=0.8,
+            edgecolor="black",
+            fancybox=False,
+            handlelength=2.5,
+            handletextpad=0.5,
+            labelspacing=0.5,
+            borderpad=0.5,
+        )
+
+    if c_lepton[0, 0] == c_lepton[2, 2] and c_lepton[1, 1] == c_lepton[2, 2]:
+        title = r"{\bf LFC flavor universal} $\,\,\vert\,\,$"
+        title += rf"$g_{{\ell \ell}} = {int(c_lepton[0,0])}$"
+    elif c_lepton[1, 1] == 0 and c_lepton[0, 0] > 0:
+        title = r"{\bf LFC $\mu$-phobic} $\,\,\vert\,\,$"
+        title += rf"$g_{{e e}} = g_{{\tau \tau}} = {int(c_lepton[0,0])}$ $\,\,\vert\,\,$ $g_{{\mu \mu}} = {int(c_lepton[1,1])}$"
+    elif c_lepton[1, 1] == 0 and c_lepton[0, 0] == 0 and c_lepton[2, 2] > 0:
+        title = r"{\bf LFC $\tau$-philic} $\,\,\vert\,\,$"
+        title += rf"$g_{{e e}} = g_{{\mu \mu}} = {int(c_lepton[0,0])}$ $\,\,\vert\,\,$ $g_{{\tau \tau}} = {int(c_lepton[2,2])}$"
+
+    ax.set_yscale(yscale)
+    ax.set_xscale(xscale)
+    ax.set_ylabel(rf"$f_a^{{{-fa_power}}}$ [GeV$^{{{-fa_power}}}$]")
+    ax.set_xlabel(r"$m_a$ [GeV]")
+
+    ax.set_ylim(ymin**fa_power, ymax**fa_power)
+    ax.set_xlim(xmin, xmax)
+
+    if vlines:
+        ax.vlines(2 * const.m_mu, ymin, ymax, color="grey", linestyle="--", lw=0.5)
+        ax.annotate(
+            r"$2 m_\mu$",
+            (0.92 * (2 * const.m_mu), ymin * 1.1),
+            fontsize=9.5,
+            ha="center",
+            va="bottom",
+            rotation=90,
+            color="grey",
+        )
+
+        ax.vlines(
+            const.m_mu + const.m_e, ymin, ymax, color="grey", linestyle="--", lw=0.5
+        )
+        ax.annotate(
+            r"$m_\mu + m_e$",
+            (0.92 * (const.m_mu + const.m_e), ymin * 1.1),
+            fontsize=9.5,
+            ha="center",
+            va="bottom",
+            rotation=90,
+            color="grey",
+        )
+
+    ax.set_title(title, fontsize=11, pad=7.5)
+
+    fig.savefig(
+        f"plots/ALP_benchmark_{name}{name_modifier}.pdf", bbox_inches="tight", dpi=400
+    )
+    return fig, ax
 
 
 def plot_other_limits_Bvis(
@@ -517,7 +1087,7 @@ def plot_other_limits_Bvis(
     P_decay = alps.prob_decay(p_alp_avg, 300, 100e100)  # 3 m travel
 
     BR_tau_mu_a = 1 / B_limit_90CL_interp * P_decay * alps.BR_tau_to_a_mu()
-    c = ax.contourf(
+    _ = ax.contourf(
         BVIS,
         INV_FA,
         BR_tau_mu_a,
@@ -526,7 +1096,7 @@ def plot_other_limits_Bvis(
         alpha=1,
         zorder=0,
     )
-    c = ax.contour(
+    _ = ax.contour(
         BVIS,
         INV_FA,
         BR_tau_mu_a,
@@ -537,11 +1107,6 @@ def plot_other_limits_Bvis(
         alpha=1,
         zorder=2,
     )
-
-    # x_vis = []
-    # y_vis = []
-    # x_vis.append([c.collections[0].get_paths()[0].vertices[:,0]])
-    # y_vis.append([c.collections[0].get_paths()[0].vertices[:,1]])
 
     ################################################################
     # Belle-II (Tau -> e alp)
@@ -556,7 +1121,7 @@ def plot_other_limits_Bvis(
     P_decay = alps.prob_decay(p_alp_avg, 300, 100e100)  # 3 m travel
 
     BR_tau_e_a = 1 / B_limit_90CL_interp * P_decay * alps.BR_tau_to_a_e()
-    c = ax.contourf(
+    _ = ax.contourf(
         BVIS,
         INV_FA,
         BR_tau_e_a,
@@ -565,7 +1130,7 @@ def plot_other_limits_Bvis(
         alpha=1,
         zorder=0,
     )
-    c = ax.contour(
+    _ = ax.contour(
         BVIS,
         INV_FA,
         BR_tau_e_a,
@@ -578,7 +1143,7 @@ def plot_other_limits_Bvis(
     )
 
     BR_tau_ell_a = alps.BR_tau_to_a_e() + alps.BR_tau_to_a_mu()
-    c = ax.contourf(
+    _ = ax.contourf(
         BVIS,
         INV_FA,
         BR_tau_ell_a,
@@ -587,7 +1152,7 @@ def plot_other_limits_Bvis(
         alpha=1,
         zorder=0.2,
     )
-    c = ax.contour(
+    _ = ax.contour(
         BVIS,
         INV_FA,
         BR_tau_ell_a,
@@ -613,7 +1178,7 @@ def plot_other_limits_Bvis(
             + alps.BR_tau_to_a_mu() * alps.BR_a_to_me
         )
     )
-    c = ax.contourf(
+    _ = ax.contourf(
         BVIS,
         INV_FA,
         BR_tau_mu_a,
@@ -622,7 +1187,7 @@ def plot_other_limits_Bvis(
         alpha=1,
         zorder=0,
     )
-    c = ax.contour(
+    _ = ax.contour(
         BVIS,
         INV_FA,
         BR_tau_mu_a,
@@ -640,7 +1205,7 @@ def plot_other_limits_Bvis(
     P_decay = alps.prob_decay(p_alp_avg, 0, 1)  # decays within 1 cm
     B_limit_90CL = 2.1e-8
     BR_tau_mu_a = 1 / B_limit_90CL * P_decay * alps.BR_tau_to_a_mu() * alps.BR_a_to_mm
-    c = ax.contourf(
+    _ = ax.contourf(
         BVIS,
         INV_FA,
         BR_tau_mu_a,
@@ -649,7 +1214,7 @@ def plot_other_limits_Bvis(
         alpha=1,
         zorder=0,
     )
-    c = ax.contour(
+    _ = ax.contour(
         BVIS,
         INV_FA,
         BR_tau_mu_a,
@@ -667,7 +1232,7 @@ def plot_other_limits_Bvis(
     P_decay = alps.prob_decay(p_alp_avg, 0, 1)  # decays within 1 cm
     B_limit_90CL = 2.7e-8
     BR_tau_mu_a = 1 / B_limit_90CL * P_decay * alps.BR_tau_to_a_mu() * alps.BR_a_to_me
-    c = ax.contourf(
+    _ = ax.contourf(
         BVIS,
         INV_FA,
         BR_tau_mu_a,
@@ -676,7 +1241,7 @@ def plot_other_limits_Bvis(
         alpha=1,
         zorder=0,
     )
-    c = ax.contour(
+    _ = ax.contour(
         BVIS,
         INV_FA,
         BR_tau_mu_a,
@@ -693,7 +1258,7 @@ def plot_other_limits_Bvis(
     P_decay = alps.prob_decay(p_alp_avg, 0, 1)  # decays within 1 cm
     B_limit_90CL = 1.7e-8
     BR_tau_mu_a = 1 / B_limit_90CL * P_decay * alps.BR_tau_to_a_mu() * alps.BR_a_to_em
-    c = ax.contourf(
+    _ = ax.contourf(
         BVIS,
         INV_FA,
         BR_tau_mu_a,
@@ -702,7 +1267,7 @@ def plot_other_limits_Bvis(
         alpha=1,
         zorder=0,
     )
-    c = ax.contour(
+    _ = ax.contour(
         BVIS,
         INV_FA,
         BR_tau_mu_a,
@@ -720,7 +1285,7 @@ def plot_other_limits_Bvis(
     P_decay = alps.prob_decay(p_alp_avg, 0, 1)  # decays within 1 cm
     B_limit_90CL = 1.5e-8
     BR_tau_mu_a = 1 / B_limit_90CL * P_decay * alps.BR_tau_to_a_mu() * alps.BR_a_to_me
-    c = ax.contourf(
+    _ = ax.contourf(
         BVIS,
         INV_FA,
         BR_tau_mu_a,
@@ -729,7 +1294,7 @@ def plot_other_limits_Bvis(
         alpha=1,
         zorder=0,
     )
-    c = ax.contour(
+    _ = ax.contour(
         BVIS,
         INV_FA,
         BR_tau_mu_a,
@@ -753,6 +1318,7 @@ def plot_other_limits(
     annotate=False,
     edgecolor="dimgrey",
 ):
+
     # Muon Limits
     x, y = np.genfromtxt("digitized/Jodidio_et_al_A.dat", unpack=True)
     y *= 2
@@ -798,49 +1364,49 @@ def plot_other_limits(
     #     zorder=0.2,
     # )
 
-    # SN1987A
-    x, y = np.genfromtxt("digitized/Supernova_mumu.dat", unpack=True)
-    x *= 1e-9
-    y = y[np.argsort(x)]
-    x = x[np.argsort(x)]
-    ax.fill_between(
-        x,
-        (1 / y) / c_lepton[1, 1],
-        y / y,
-        facecolor=lighten_color(inv_color, 0.5),
-        edgecolor="None",
-        linestyle="-",
-        zorder=0.1,
-    )
-    ax.plot(
-        x,
-        (1 / y) / c_lepton[1, 1],
-        color=lighten_color(edgecolor, 0.5),
-        linestyle=(1, (6, 2)),
-        lw=0.2,
-        zorder=0.2,
-    )
+    # # SN1987A
+    # x, y = np.genfromtxt("digitized/Supernova_mumu.dat", unpack=True)
+    # x *= 1e-9
+    # y = y[np.argsort(x)]
+    # x = x[np.argsort(x)]
+    # ax.fill_between(
+    #     x,
+    #     (1 / y) / c_lepton[1, 1],
+    #     y / y,
+    #     facecolor=lighten_color(inv_color, 0.5),
+    #     edgecolor="None",
+    #     linestyle="-",
+    #     zorder=0.1,
+    # )
+    # ax.plot(
+    #     x,
+    #     (1 / y) / c_lepton[1, 1],
+    #     color=lighten_color(edgecolor, 0.5),
+    #     linestyle=(1, (6, 2)),
+    #     lw=0.2,
+    #     zorder=0.2,
+    # )
 
-    # SN1987A ee
-    x, y = np.genfromtxt("digitized/Supernova_ee.dat", unpack=True)
-    x *= 1e-9
-    x, y = get_ordered_closed_region([x, y], logx=True, logy=True)
-    ax.fill(
-        x,
-        (1 / y) / c_lepton[0, 0],
-        facecolor=lighten_color(inv_color, 0.5),
-        edgecolor="None",
-        linestyle="-",
-        zorder=0.1,
-    )
-    ax.plot(
-        x,
-        (1 / y) / c_lepton[0, 0],
-        color=lighten_color(edgecolor, 0.5),
-        linestyle=(1, (6, 2)),
-        lw=0.2,
-        zorder=0.2,
-    )
+    # # SN1987A ee
+    # x, y = np.genfromtxt("digitized/Supernova_ee.dat", unpack=True)
+    # x *= 1e-9
+    # x, y = get_ordered_closed_region([x, y], logx=True, logy=True)
+    # ax.fill(
+    #     x,
+    #     (1 / y) / c_lepton[0, 0],
+    #     facecolor=lighten_color(inv_color, 0.5),
+    #     edgecolor="None",
+    #     linestyle="-",
+    #     zorder=0.1,
+    # )
+    # ax.plot(
+    #     x,
+    #     (1 / y) / c_lepton[0, 0],
+    #     color=lighten_color(edgecolor, 0.5),
+    #     linestyle=(1, (6, 2)),
+    #     lw=0.2,
+    #     zorder=0.2,
+    # )
 
     # SN1987A emu
     for v in ["v1", "v2"]:
@@ -935,11 +1501,72 @@ def plot_other_limits(
     # )
 
     ###########################################################
-    ma = np.geomspace(1e-3, 3, 1000)
-    inv_fa = np.geomspace(1e-9, 1e-2, 1000, endpoint=True)
+    ma = np.geomspace(1e-3, 3, 100)
+    inv_fa = np.geomspace(1e-9, 1e-2, 100, endpoint=True)
     MA, INV_FA = np.meshgrid(ma, inv_fa)
 
     alps = ALP(MA, 1 / INV_FA, c_lepton=c_lepton, c_NN=c_NN, mN=mN, Bvis=1)
+
+    ################################################################
+    # LFV MEG-II (mu -> e gamma)
+    Z = alps.BR_li_to_lj_gamma(1, 0)
+    ax.contourf(
+        MA, INV_FA, Z, levels=[1.5e-13, 1e10], colors=[inv_color], alpha=1, zorder=0.2
+    )
+    ax.contour(
+        MA,
+        INV_FA,
+        Z,
+        levels=[1.5e-13],
+        alpha=1,
+        colors=[edgecolor],
+        linestyles="-",
+        linewidths=[linewidth],
+        zorder=2,
+    )
+    #
+    ################################################################
+    # LFV BaBAr (tau -> ell gamma)
+    Z = alps.BR_li_to_lj_gamma(2, 0)
+    ax.contourf(
+        MA, INV_FA, Z, levels=[3.3e-8, 1e10], colors=[inv_color], alpha=1, zorder=0.2
+    )
+    ax.contour(
+        MA,
+        INV_FA,
+        Z,
+        levels=[3.3e-8],
+        alpha=1,
+        colors=[edgecolor],
+        linestyles="-",
+        linewidths=[linewidth],
+        zorder=2,
+    )
+    #
+    Z = alps.BR_li_to_lj_gamma(2, 1)
+    ax.contourf(
+        MA, INV_FA, Z, levels=[4.2e-8, 1e10], colors=[inv_color], alpha=1, zorder=0.2
+    )
+    ax.contour(
+        MA,
+        INV_FA,
+        Z,
+        levels=[4.2e-8],
+        alpha=1,
+        colors=[edgecolor],
+        linestyles="-",
+        linewidths=[linewidth],
+        zorder=2,
+    )
+    #
+
+    ###########################################################
+    ma = np.geomspace(1e-3, 3, 1000)
+    inv_fa = np.geomspace(1e-9, 1e-2, 500, endpoint=True)
+    MA, INV_FA = np.meshgrid(ma, inv_fa)
+
+    alps = ALP(MA, 1 / INV_FA, c_lepton=c_lepton, c_NN=c_NN, mN=mN, Bvis=1)
+
     ################################################################
     # Belle-II (Tau -> mu alp)
     ma_limit, B_limit_90CL = np.genfromtxt(
@@ -977,7 +1604,7 @@ def plot_other_limits(
         MA,
         INV_FA,
         BR_tau_ell_a,
-        levels=[1e-2, 1e100],
+        levels=[1e-3, 1e100],
         colors=[inv_color],
         alpha=1,
         zorder=0.5,
@@ -986,7 +1613,7 @@ def plot_other_limits(
         MA,
         INV_FA,
         BR_tau_ell_a,
-        levels=[1e-2],
+        levels=[1e-3],
         colors=[edgecolor],
         linestyles="-",
         linewidths=[linewidth],
@@ -1065,7 +1692,7 @@ def plot_other_limits(
     # Belle (Tau- -> mu- (alp -> mu+ mu-))
     p_alp_avg = 10.58 / 4
     P_decay = alps.prob_decay(p_alp_avg, 0, 1)  # decays within 1 cm
-    B_limit_90CL = 2.1e-8
+    B_limit_90CL = 1.9e-8
     BR_tau_mu_a = 1 / B_limit_90CL * P_decay * alps.BR_tau_to_a_mu() * alps.BR_a_to_mm
     c = ax.contourf(
         MA,
@@ -1147,7 +1774,7 @@ def plot_other_limits(
     P_decay = alps.prob_decay(p_alp_avg, 0, 1)  # decays within 1 cm
     B_limit_90CL = 1.5e-8
     BR_tau_mu_a = 1 / B_limit_90CL * P_decay * alps.BR_tau_to_a_mu() * alps.BR_a_to_me
-    c = ax.contourf(
+    _ = ax.contourf(
         MA,
         INV_FA,
         BR_tau_mu_a,
@@ -1156,7 +1783,7 @@ def plot_other_limits(
         alpha=1,
         zorder=0,
     )
-    c = ax.contour(
+    _ = ax.contour(
         MA,
         INV_FA,
         BR_tau_mu_a,
@@ -1168,26 +1795,26 @@ def plot_other_limits(
         zorder=2,
     )
     if annotate:
-        ax.annotate(
-            r"Supernova $g_{\mu \mu}$",
-            xy=(1.05e-2, 2.4e-8 / c_lepton[1, 1]),
-            xycoords="data",
-            fontsize=9,
-            horizontalalignment="left",
-            verticalalignment="center",
-            zorder=3,
-            color=edgecolor,
-        )
-        ax.annotate(
-            r"Supernova $g_{ee}$",
-            xy=(1.05e-2, 8e-8 / c_lepton[0, 0]),
-            xycoords="data",
-            fontsize=9,
-            horizontalalignment="left",
-            verticalalignment="center",
-            zorder=3,
-            color=edgecolor,
-        )
+        # ax.annotate(
+        #     r"Supernova $g_{\mu \mu}$",
+        #     xy=(1.05e-2, 2.4e-8 / c_lepton[1, 1]),
+        #     xycoords="data",
+        #     fontsize=9,
+        #     horizontalalignment="left",
+        #     verticalalignment="center",
+        #     zorder=3,
+        #     color=edgecolor,
+        # )
+        # ax.annotate(
+        #     r"Supernova $g_{ee}$",
+        #     xy=(1.05e-2, 8e-8 / c_lepton[0, 0]),
+        #     xycoords="data",
+        #     fontsize=9,
+        #     horizontalalignment="left",
+        #     verticalalignment="center",
+        #     zorder=3,
+        #     color=edgecolor,
+        # )
         ax.annotate(
             r"Supernova $g_{e\mu}$",
             xy=(1.05e-2, 0.6e-8 / c_lepton[0, 1]),
@@ -1211,7 +1838,7 @@ def plot_other_limits(
                 color="dimgrey",
             )
         ax.annotate(
-            r"$\tau \to \ell + a_{\rm inv}$",
+            r"$\tau \to \ell a_{\rm inv}$",
             xy=(1.05e-2, 3e-7 / c_lepton[0, 2]),
             xycoords="data",
             fontsize=9,
@@ -1221,8 +1848,8 @@ def plot_other_limits(
             color=edgecolor,
         )
         ax.annotate(
-            r"$\tau$ lifetime",
-            xy=(1.05e-2, 9e-7 / c_lepton[0, 2]),
+            r"$\tau \to \mu \gamma$",
+            xy=(1.05e-2, 1.3e-4 / np.sqrt(c_lepton[2, 1])),
             xycoords="data",
             fontsize=9,
             horizontalalignment="left",
@@ -1231,9 +1858,41 @@ def plot_other_limits(
             color=edgecolor,
         )
         ax.annotate(
-            r"$\tau \to \ell + a_{\rm vis}$",
-            xy=(0.55, 2.5e-7 / np.sqrt(c_lepton[1, 2])),
+            r"$\tau \to e \gamma$",
+            xy=(1.05e-2, 0.6e-4 / np.sqrt(c_lepton[2, 0])),
             xycoords="data",
+            fontsize=9,
+            horizontalalignment="left",
+            verticalalignment="center",
+            zorder=3,
+            color=edgecolor,
+        )
+        ax.annotate(
+            r"$\mu \to e \gamma$",
+            xy=(1.05e-2, 2.2e-5 / np.sqrt(c_lepton[1, 0])),
+            xycoords="data",
+            fontsize=9,
+            horizontalalignment="left",
+            verticalalignment="center",
+            zorder=3,
+            color=edgecolor,
+        )
+        ax.annotate(
+            r"$\tau$ lifetime",
+            xy=(0.65, 2 * 4.5e-7 / (c_lepton[1, 2] + c_lepton[0, 2])),
+            xycoords="data",
+            rotation=20,
+            fontsize=9,
+            horizontalalignment="left",
+            verticalalignment="center",
+            zorder=3,
+            color=edgecolor,
+        )
+        ax.annotate(
+            r"$\tau \to \ell a_{\rm vis}$",
+            xy=(0.8, 2.4e-7 / np.sqrt(c_lepton[1, 2])),
+            xycoords="data",
+            rotation=20,
             fontsize=9,
             horizontalalignment="left",
             verticalalignment="center",
@@ -1263,6 +1922,91 @@ def plot_other_limits_LFC(
     # )
 
     if c_lepton[0, 0] > 0:
+
+        # if c_lepton[0, 0] > 0:
+        #     ###########################################################
+        #     ma = np.geomspace(1e-3, 10, 1000)
+        #     fa = np.geomspace(0.1, 1e6, 1000)
+        #     M, F = np.meshgrid(ma, fa)
+
+        #     alp = ALP(M, F, c_lepton=c_lepton)
+        #     Z = alp.delta_a_mag_mom(l_i=0)
+        #     ax.contourf(
+        #         M,
+        #         1 / F,
+        #         Z,
+        #         levels=[
+        #             DELTA_a_electron_LKB[0] - 2 * DELTA_a_electron_LKB[1],
+        #             DELTA_a_electron_LKB[0] + 2 * DELTA_a_electron_LKB[1],
+        #         ],
+        #         colors=["lightgrey"],
+        #         linewidths=[0],
+        #     )
+
+        #     ax.contour(
+        #         M,
+        #         1 / F,
+        #         Z,
+        #         levels=[
+        #             DELTA_a_electron_LKB[0] - 2 * DELTA_a_electron_LKB[1],
+        #             DELTA_a_electron_LKB[0] + 2 * DELTA_a_electron_LKB[1],
+        #         ],
+        #         colors=[edgecolor],
+        #         linestyles=["-"],
+        #         linewidths=linewidth * 2,
+        #         zorder=2,
+        #     )
+        #     ax.annotate(
+        #         r"$(g-2)_e$",
+        #         xy=(0.4, 5e-3),
+        #         fontsize=10,
+        #         color="grey",
+        #         ha="left",
+        #         va="bottom",
+        #         rotation=18,
+        #     )
+
+        if c_lepton[1, 1] > 0:
+            ###########################################################
+            ma = np.geomspace(1e-3, 10, 1000)
+            fa = np.geomspace(0.1, 1e6, 1000)
+            M, F = np.meshgrid(ma, fa)
+
+            alp = ALP(M, F, c_lepton=c_lepton)
+            Z = alp.delta_a_mag_mom(l_i=1)
+            ax.contourf(
+                M,
+                1 / F,
+                Z,
+                levels=[
+                    -np.inf,
+                    DELTA_COMBINED_2023_SM_2025[0] - 2 * DELTA_COMBINED_2023_SM_2025[1],
+                ],
+                colors=["lightgrey"],
+                linewidths=[0],
+            )
+
+            ax.contour(
+                M,
+                1 / F,
+                Z,
+                levels=[
+                    DELTA_COMBINED_2023_SM_2025[0] - 2 * DELTA_COMBINED_2023_SM_2025[1],
+                ],
+                colors=[edgecolor],
+                linestyles=["-"],
+                linewidths=linewidth * 2,
+                zorder=2,
+            )
+            ax.annotate(
+                r"$(g-2)_\mu$",
+                xy=(0.4, 5e-3),
+                fontsize=10,
+                color="grey",
+                ha="left",
+                va="bottom",
+                rotation=18,
+            )
 
         if c_lepton[0, 0] == c_lepton[1, 1] and c_lepton[1, 1] == c_lepton[2, 2]:
             ###########################################################
@@ -1506,6 +2250,37 @@ def plot_other_limits_LFC(
         ###########################################################
         if c_lepton[0, 0] > 0 and c_lepton[1, 1] == 0:
 
+            ###########################################################
+            x, y = np.genfromtxt("digitized/NA64vis_LFC.dat", unpack=True)
+            x = x * 1e-3
+            x, y = get_ordered_closed_region([x, y], logx=True, logy=True)
+            ax.fill(
+                x,
+                y,
+                facecolor="lightgrey",
+                edgecolor="None",
+                linestyle="-",
+                zorder=0.4,
+            )
+            ax.fill(
+                x,
+                y,
+                facecolor="None",
+                edgecolor=edgecolor,
+                linestyle="-",
+                zorder=2,
+                linewidth=2 * linewidth,
+            )
+            ax.annotate(
+                r"NA64e",
+                xy=(7e-3, 3.2e-1),
+                fontsize=10,
+                color="grey",
+                ha="left",
+                va="bottom",
+                rotation=-36,
+            )
+
             x, y = np.genfromtxt("digitized/E137_Araki_et_al_LFC.dat", unpack=True)
             y = y / const.m_e
             # y = np.append(y, y[np.argmin(x*y)])
@@ -1660,7 +2435,7 @@ def plot_other_limits_LFC(
             # ax.annotate(r'Beam dumps', xy=(1.2e-3, 0.8e-7), fontsize=10, color='grey', ha='left', va='bottom')
             ax.annotate(
                 r"BaBar/Belle",
-                xy=(0.4, norm * 4e-6),
+                xy=(0.4, norm * 1e-6),
                 fontsize=10,
                 color="grey",
                 ha="left",
@@ -1774,10 +2549,512 @@ def plot_other_limits_LFC(
             )
 
 
-def plot_hist_with_errors(
-    ax, data, weights, bins, label, color, zorder=2, lw=1.5, nevents=1, ls="-"
+def make_Bvis_plot_LFV(
+    BP_NAME, c_lepton, c_NN, mN, ma_fixed, smear=False, ymax=1e-3, ymin=1e-10
 ):
-    norm = np.max(weights)
+
+    fig, ax = std_fig(figsize=(5, 5))
+
+    plot_other_limits_Bvis(
+        ax, ma_fixed=ma_fixed, c_lepton=c_lepton, c_NN=c_NN, mN=mN, linewidth=0.0
+    )
+
+    # labels for legend
+    labels = []
+    labelnames = []
+    name = BP_NAME
+
+    Nsig = 2.3
+    X, Y, Z = np.load(f"data/invfa_vs_Bvis_CHARM_rates_{name}.npy", allow_pickle=True)
+    X, Y, Z = interp_grid(X.flatten(), Y.flatten(), Z.flatten(), logx=True, logy=True)
+    c = ax.contourf(
+        X,
+        Y,
+        Z,
+        levels=[Nsig, 1e100],
+        colors=[lighten_color(CB_color_cycle[0], 0.5)],
+        alpha=1,
+        zorder=1.5,
+    )
+    _ = ax.contour(
+        X,
+        Y,
+        Z,
+        levels=[Nsig],
+        colors=CB_color_cycle[0],
+        linestyles="-",
+        linewidths=[1],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append("CHARM")
+
+    X, Y, Z = np.load(f"data/invfa_vs_Bvis_BEBC_rates_{name}.npy", allow_pickle=True)
+    X, Y, Z = interp_grid(X.flatten(), Y.flatten(), Z.flatten(), logx=True, logy=True)
+    c = ax.contourf(
+        X,
+        Y,
+        Z,
+        levels=[Nsig, 1e100],
+        colors=[lighten_color(CB_color_cycle[1], 0.5)],
+        alpha=1,
+        zorder=1.4,
+    )
+    _ = ax.contour(
+        X,
+        Y,
+        Z,
+        levels=[Nsig],
+        colors=CB_color_cycle[1],
+        linestyles="-",
+        linewidths=[1],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append("BEBC")
+
+    # X,Y,Z = np.load(f'data/NA62_rates{name}.npy', allow_pickle=True)
+    # c = ax.contourf(X, Y, Z, levels=[Nsig, 1e100], colors=[lighten_color('firebrick', 0.85)], alpha=1, zorder=1.1)
+    # _ = ax.contour(X, Y, Z, levels=[Nsig], colors='firebrick', linestyles='-', linewidths=[1], alpha=1, zorder=2)
+    # labels.append(c.legend_elements()[0][0])
+    # labelnames.append(r'NA62 ($1.4\times 10^{17}$ POT)')
+
+    X, Y, Z = np.load(f"data/invfa_vs_Bvis_NoVA_rates_{name}.npy", allow_pickle=True)
+    X, Y, Z = interp_grid(X.flatten(), Y.flatten(), Z.flatten(), logx=True, logy=True)
+    # c = ax.contourf(X, Y, Z, levels=[Nsig, 1e100], colors=[lighten_color('darkorange', 0.5)], alpha=1, zorder=1.3)
+    c = ax.contour(
+        X,
+        Y,
+        Z,
+        levels=[Nsig],
+        colors=CB_color_cycle[0],
+        linestyles=[(1, (2, 1))],
+        linewidths=[1.25],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append("NOvA")
+
+    X, Y, Z = np.load(
+        f"data/invfa_vs_Bvis_MicroBooNE_rates_{name}.npy", allow_pickle=True
+    )
+    X, Y, Z = interp_grid(X.flatten(), Y.flatten(), Z.flatten(), logx=True, logy=True)
+    # c = ax.contourf(X, Y, Z, levels=[Nsig, 1e100], colors=[lighten_color('black', 0.5)], alpha=1, zorder=1.2)
+    c = ax.contour(
+        X,
+        Y,
+        Z,
+        levels=[Nsig],
+        colors=CB_color_cycle[1],
+        linestyles=[(1, (4, 1))],
+        linewidths=[1.25],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append("$\mu$BooNE (NuMI)")
+
+    X, Y, Z = np.load(f"data/invfa_vs_Bvis_ICARUS_rates_{name}.npy", allow_pickle=True)
+    X, Y, Z = interp_grid(X.flatten(), Y.flatten(), Z.flatten(), logx=True, logy=True)
+    # c = ax.contourf(X, Y, Z, levels=[Nsig, 1e100], colors=[lighten_color('black', 0.5)], alpha=1, zorder=1.1)
+    c = ax.contour(
+        X,
+        Y,
+        Z,
+        levels=[Nsig],
+        colors=CB_color_cycle[0],
+        linestyles=[(1, (6, 0))],
+        linewidths=[1.25],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append("ICARUS (NuMI)")
+
+    X1, Y1, Z1 = np.load(
+        f"data/invfa_vs_Bvis_ProtoDUNE-NP02_rates_{name}.npy", allow_pickle=True
+    )
+    _, _, Z2 = np.load(
+        f"data/invfa_vs_Bvis_ProtoDUNE-NP02_rates_{name}.npy", allow_pickle=True
+    )
+    X, Y, Z = X1, Y1, Z1 + Z2
+    X, Y, Z = interp_grid(X.flatten(), Y.flatten(), Z.flatten(), logx=True, logy=True)
+    c = ax.contour(
+        X,
+        Y,
+        Z,
+        levels=[Nsig],
+        colors="lightgreen",
+        linestyles=[(1, (3, 2))],
+        linewidths=[1.25],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append(r"Proto-DUNE")
+
+    X, Y, Z = np.load(f"data/invfa_vs_Bvis_FASER_rates_{name}.npy", allow_pickle=True)
+    X, Y, Z = interp_grid(X.flatten(), Y.flatten(), Z.flatten(), logx=True, logy=True)
+    # c = ax.contourf(X, Y, Z, levels=[Nsig, 1e100], colors=[lighten_color='black', 0.95)], alpha=1, zorder=1.91)
+    c = ax.contour(
+        X,
+        Y,
+        Z,
+        levels=[Nsig],
+        colors="black",
+        linestyles=[(1, (2, 0.5))],
+        linewidths=[1.5],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append("FASER")
+
+    X, Y, Z = np.load(f"data/invfa_vs_Bvis_FASER2_rates_{name}.npy", allow_pickle=True)
+    X, Y, Z = interp_grid(X.flatten(), Y.flatten(), Z.flatten(), logx=True, logy=True)
+    c = ax.contour(
+        X,
+        Y,
+        Z,
+        levels=[Nsig],
+        colors="black",
+        linestyles=[(1, (5, 1))],
+        linewidths=[1.5],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append(r"FASER-2")
+
+    X, Y, Z = np.load(f"data/invfa_vs_Bvis_SHiP_rates_{name}.npy", allow_pickle=True)
+    X, Y, Z = interp_grid(X.flatten(), Y.flatten(), Z.flatten(), logx=True, logy=True)
+    c = ax.contour(
+        X,
+        Y,
+        Z,
+        levels=[Nsig],
+        colors="black",
+        linestyles="-",
+        linewidths=[1.75],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append(r"SHiP")
+
+    ax.legend(
+        labels,
+        labelnames,
+        loc="upper left",
+        fontsize=8.5,
+        ncol=1,
+        frameon=True,
+        framealpha=0.8,
+        edgecolor="black",
+        fancybox=False,
+        handlelength=2.5,
+        handletextpad=0.5,
+        labelspacing=0.5,
+        borderpad=0.5,
+    )
+
+    if c_lepton[0, 0] != c_lepton[0, 2]:
+        title = r"{\bf LFV hierarchy} $\,\,\vert\,\,$"
+        title += rf"$g_{{\ell \ell}} = {int(c_lepton[0,0])}$"
+        title += r"$\,\,\vert\,\, g_{{(e,\mu)\tau}} = \lambda$"
+        title += r"$\,\,\vert\,\, g_{{e\mu}} = \lambda^2 $"
+        title += rf"$\,\,\vert\,\, \lambda = {sci_notation(c_lepton[1,2], notex=True, precision=1)}$"
+
+    elif c_lepton[0, 0] == c_lepton[0, 2]:
+        title = r"{\bf LFV anarchy} $\,\,\vert\,\,$"
+        # ax.annotate(r'\noindent \bf LFV anarchy \\ $\tau$ limits only', xy=(0.02, 0.98), xycoords='axes fraction', fontsize=11, ha='left', va='top')
+        title += rf"$g_{{\ell_1 \ell_2}} = {int(c_lepton[0,0])}$"
+
+    title += rf"$\,\vert\, m_a = {ma_fixed}$~GeV"
+
+    ax.set_yscale("log")
+    ax.set_xscale("log")
+    ax.set_ylabel(r"$1/f_a$ [GeV$^{-1}$]")
+    ax.set_xlabel(
+        r"$\mathcal{B}(a \to {\rm vis}) = 1 - \mathcal{B}(a\to \text{dark sector})$"
+    )
+    ax.set_ylim(ymin, ymax)
+    ax.set_xlim(1e-6, 1)
+
+    ax.set_title(title, fontsize=11, pad=10)
+    fig.savefig(f"plots/ALP_benchmark_{name}_Bvis.pdf", bbox_inches="tight", dpi=400)
+
+
+def make_Bvis_plot_LFC(
+    BP_NAME, c_lepton, c_NN, mN, ma_fixed, smear=False, ymax=1e-3, ymin=1e-10
+):
+
+    fig, ax = std_fig(figsize=(5, 5))
+
+    plot_other_limits_Bvis(
+        ax, ma_fixed=ma_fixed, c_lepton=c_lepton, c_NN=c_NN, mN=mN, linewidth=0.0
+    )
+
+    # labels for legend
+    labels = []
+    labelnames = []
+    name = BP_NAME
+
+    Nsig = 2.3
+    X, Y, Z = np.load(f"data/invfa_vs_Bvis_CHARM_rates_{name}.npy", allow_pickle=True)
+    X, Y, Z = interp_grid(X.flatten(), Y.flatten(), Z.flatten(), logx=True, logy=True)
+    c = ax.contourf(
+        X,
+        Y,
+        Z,
+        levels=[Nsig, 1e100],
+        colors=[lighten_color(CB_color_cycle[0], 0.5)],
+        alpha=1,
+        zorder=1.5,
+    )
+    _ = ax.contour(
+        X,
+        Y,
+        Z,
+        levels=[Nsig],
+        colors=CB_color_cycle[0],
+        linestyles="-",
+        linewidths=[1],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append("CHARM")
+
+    X, Y, Z = np.load(f"data/invfa_vs_Bvis_BEBC_rates_{name}.npy", allow_pickle=True)
+    X, Y, Z = interp_grid(X.flatten(), Y.flatten(), Z.flatten(), logx=True, logy=True)
+    c = ax.contourf(
+        X,
+        Y,
+        Z,
+        levels=[Nsig, 1e100],
+        colors=[lighten_color(CB_color_cycle[1], 0.5)],
+        alpha=1,
+        zorder=1.4,
+    )
+    _ = ax.contour(
+        X,
+        Y,
+        Z,
+        levels=[Nsig],
+        colors=CB_color_cycle[1],
+        linestyles="-",
+        linewidths=[1],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append("BEBC")
+
+    # X,Y,Z = np.load(f'data/NA62_rates{name}.npy', allow_pickle=True)
+    # c = ax.contourf(X, Y, Z, levels=[Nsig, 1e100], colors=[lighten_color('firebrick', 0.85)], alpha=1, zorder=1.1)
+    # _ = ax.contour(X, Y, Z, levels=[Nsig], colors='firebrick', linestyles='-', linewidths=[1], alpha=1, zorder=2)
+    # labels.append(c.legend_elements()[0][0])
+    # labelnames.append(r'NA62 ($1.4\times 10^{17}$ POT)')
+
+    X, Y, Z = np.load(f"data/invfa_vs_Bvis_NoVA_rates_{name}.npy", allow_pickle=True)
+    X, Y, Z = interp_grid(X.flatten(), Y.flatten(), Z.flatten(), logx=True, logy=True)
+    # c = ax.contourf(X, Y, Z, levels=[Nsig, 1e100], colors=[lighten_color('darkorange', 0.5)], alpha=1, zorder=1.3)
+    c = ax.contour(
+        X,
+        Y,
+        Z,
+        levels=[Nsig],
+        colors=CB_color_cycle[0],
+        linestyles=[(1, (2, 1))],
+        linewidths=[1.25],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append("NOvA")
+
+    X, Y, Z = np.load(
+        f"data/invfa_vs_Bvis_MicroBooNE_rates_{name}.npy", allow_pickle=True
+    )
+    X, Y, Z = interp_grid(X.flatten(), Y.flatten(), Z.flatten(), logx=True, logy=True)
+    # c = ax.contourf(X, Y, Z, levels=[Nsig, 1e100], colors=[lighten_color('black', 0.5)], alpha=1, zorder=1.2)
+    c = ax.contour(
+        X,
+        Y,
+        Z,
+        levels=[Nsig],
+        colors=CB_color_cycle[1],
+        linestyles=[(1, (4, 1))],
+        linewidths=[1.25],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append("$\mu$BooNE (NuMI)")
+
+    X, Y, Z = np.load(f"data/invfa_vs_Bvis_ICARUS_rates_{name}.npy", allow_pickle=True)
+    X, Y, Z = interp_grid(X.flatten(), Y.flatten(), Z.flatten(), logx=True, logy=True)
+    # c = ax.contourf(X, Y, Z, levels=[Nsig, 1e100], colors=[lighten_color('black', 0.5)], alpha=1, zorder=1.1)
+    c = ax.contour(
+        X,
+        Y,
+        Z,
+        levels=[Nsig],
+        colors=CB_color_cycle[0],
+        linestyles=[(1, (6, 0))],
+        linewidths=[1.25],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append("ICARUS (NuMI)")
+
+    X1, Y1, Z1 = np.load(
+        f"data/invfa_vs_Bvis_ProtoDUNE-NP02_rates_{name}.npy", allow_pickle=True
+    )
+    _, _, Z2 = np.load(
+        f"data/invfa_vs_Bvis_ProtoDUNE-NP02_rates_{name}.npy", allow_pickle=True
+    )
+    X, Y, Z = X1, Y1, Z1 + Z2
+    X, Y, Z = interp_grid(X.flatten(), Y.flatten(), Z.flatten(), logx=True, logy=True)
+    c = ax.contour(
+        X,
+        Y,
+        Z,
+        levels=[Nsig],
+        colors="lightgreen",
+        linestyles=[(1, (3, 2))],
+        linewidths=[1.25],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append(r"ProtoDUNE")
+
+    X, Y, Z = np.load(f"data/invfa_vs_Bvis_FASER_rates_{name}.npy", allow_pickle=True)
+    X, Y, Z = interp_grid(X.flatten(), Y.flatten(), Z.flatten(), logx=True, logy=True)
+    # c = ax.contourf(X, Y, Z, levels=[Nsig, 1e100], colors=[lighten_color='black', 0.95)], alpha=1, zorder=1.91)
+    c = ax.contour(
+        X,
+        Y,
+        Z,
+        levels=[Nsig],
+        colors="black",
+        linestyles=[(1, (2, 0.5))],
+        linewidths=[1.5],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append("FASER")
+
+    X, Y, Z = np.load(f"data/invfa_vs_Bvis_FASER2_rates_{name}.npy", allow_pickle=True)
+    X, Y, Z = interp_grid(X.flatten(), Y.flatten(), Z.flatten(), logx=True, logy=True)
+    c = ax.contour(
+        X,
+        Y,
+        Z,
+        levels=[Nsig],
+        colors="black",
+        linestyles=[(1, (5, 1))],
+        linewidths=[1.5],
+        alpha=1,
+        zorder=2,
+    )
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append(r"FASER-2")
+
+    X, Y, Z = np.load(f"data/invfa_vs_Bvis_SHiP_rates_{name}.npy", allow_pickle=True)
+    X, Y, Z = interp_grid(X.flatten(), Y.flatten(), Z.flatten(), logx=True, logy=True)
+    c = ax.contour(
+        X,
+        Y,
+        Z,
+        levels=[Nsig],
+        colors="black",
+        linestyles="-",
+        linewidths=[1.75],
+        alpha=1,
+        zorder=2,
+    )
+    # x,y = c.collections[0].get_paths()[0].vertices[:,0],c.collections[0].get_paths()[0].vertices[:,1]
+    # # x=np.append([1e-2], x)
+    # # y=np.append([1e-2], y)
+    # x,y=plot_closed_region((x,y), logx=True, logy=True)
+    # c = ax.plot(x,y, edgecolor='black', facecolor='None', linestyle='-', linewidth=1.75, alpha=1, zorder=2)
+    # labels.append(c[0])
+    labels.append(c.legend_elements()[0][0])
+    labelnames.append(r"SHiP")
+
+    ax.legend(
+        labels,
+        labelnames,
+        loc="upper left",
+        fontsize=8.5,
+        ncol=1,
+        frameon=True,
+        framealpha=0.8,
+        edgecolor="black",
+        fancybox=False,
+        handlelength=2.5,
+        handletextpad=0.5,
+        labelspacing=0.5,
+        borderpad=0.5,
+    )
+
+    if c_lepton[0, 0] != c_lepton[0, 2]:
+        title = r"{\bf LFV hierarchy} $\,\,\vert\,\,$"
+        title += rf"$g_{{\ell \ell}} = {int(c_lepton[0,0])}$"
+        title += rf"$\,\,\vert\,\, g_{{(e,\mu)\tau}} = \lambda$"
+        title += rf"$\,\,\vert\,\, g_{{e\mu}} = \lambda^2 $"
+        title += rf"$\,\,\vert\,\, \lambda = {sci_notation(c_lepton[1,2], notex=True, precision=1)}$"
+
+    elif c_lepton[0, 0] == c_lepton[0, 2]:
+        title = r"{\bf LFV anarchy} $\,\,\vert\,\,$"
+        # ax.annotate(r'\noindent \bf LFV anarchy \\ $\tau$ limits only', xy=(0.02, 0.98), xycoords='axes fraction', fontsize=11, ha='left', va='top')
+        title += rf"$g_{{\ell_1 \ell_2}} = {int(c_lepton[0,0])}$"
+
+    title += rf"$\,\vert\, m_a = {ma_fixed}$~GeV"
+
+    ax.set_yscale("log")
+    ax.set_xscale("log")
+    ax.set_ylabel(r"$1/f_a$ [GeV$^{-1}$]")
+    ax.set_xlabel(
+        r"$\mathcal{B}(a \to {\rm vis}) = 1 - \mathcal{B}(a\to \text{dark sector})$"
+    )
+    ax.set_ylim(ymin, ymax)
+    # ax.set_xlim(X.min(), 1)
+    ax.set_xlim(1e-6, 1)
+
+    ax.set_title(title, fontsize=11, pad=10)
+    # ax.invert_xaxis()
+    # ax.set_xticklabels(ax.get_xticklabels()[::-1])
+    fig.savefig(f"plots/ALP_benchmark_{name}_Bvis.pdf", bbox_inches="tight", dpi=400)
+
+
+def plot_hist_with_errors(
+    ax,
+    data,
+    weights,
+    bins,
+    label,
+    color,
+    zorder=2,
+    lw=1.5,
+    nevents=1,
+    ls="-",
+    normalize=False,
+    alpha=0.5,
+    histtype="step",
+):
+    if normalize:
+        norm = np.max(weights)
+    else:
+        norm = 1
     weights = weights / norm
     # Compute histogram and sum of squared weights per bin
     counts, bin_edges = np.histogram(data, bins=bins, weights=weights * nevents)
@@ -1795,8 +3072,9 @@ def plot_hist_with_errors(
         bins=bins,
         weights=weights * norm,
         label=label,
-        histtype="step",
+        histtype=histtype,
         edgecolor=color,
+        facecolor=color,
         linestyle=ls,
         density=False,
         zorder=zorder,
@@ -1811,7 +3089,75 @@ def plot_hist_with_errors(
         width=bin_widths,
         edgecolor="None",
         facecolor=color,
-        alpha=0.5,
+        alpha=alpha,
         lw=0,
         zorder=zorder - 0.1,
     )
+
+
+def make_ctau_plot(
+    inv_fa_range=[0.5e-9, 1e-4],
+    ma_range=[1e-2, const.m_tau - const.m_e * 1.01],
+    Npoints=101,
+    c_lepton=False,
+    name="",
+    c_NN=0,
+    mN=0,
+):
+
+    fig, ax = std_fig(figsize=(5, 5))
+    inv_fas = np.geomspace(*inv_fa_range, Npoints, endpoint=True)
+    m_alps = np.geomspace(*ma_range, Npoints, endpoint=True)
+    MA, INV_FA = np.meshgrid(m_alps, inv_fas)
+
+    alp = ALP(MA, 1 / INV_FA, c_NN=c_NN, mN=mN, Bvis=1)
+    Z = const.get_decay_rate_in_cm(alp.Gamma_a)
+    print(Z.min(), Z.max())
+    ax.contour(
+        MA,
+        INV_FA,
+        np.log10(Z),
+        levels=100,
+        cmap="Blues",
+        linestyles="-",
+        linewidths=[1],
+        alpha=1,
+        zorder=2,
+    )
+
+    ax.set_yscale("log")
+    ax.set_xscale("log")
+
+
+def make_ctau_plot_Bvis(
+    inv_fa_range=[0.5e-9, 1e-4],
+    Bvis_range=[1e-12, 1],
+    Npoints=101,
+    c_lepton=False,
+    name="",
+    c_NN=0,
+    mN=0,
+    ma_fixed=0.3,
+):
+
+    fig, ax = std_fig(figsize=(5, 5))
+    inv_fas = np.geomspace(*inv_fa_range, Npoints, endpoint=True)
+    Bvis = np.geomspace(*Bvis_range, Npoints, endpoint=True)
+    X, Y = np.meshgrid(Bvis, inv_fas)
+    alp = ALP(ma_fixed, 1 / Y, c_NN=c_NN, mN=mN, Bvis=X)
+    Z = const.get_decay_rate_in_cm(alp.Gamma_a)
+    # X,Y,Z = interp_grid(X.flatten(), Y.flatten(), Z.flatten(), logx=True, logy=True)
+    ax.contour(
+        X,
+        Y,
+        np.log10(Z),
+        levels=20,
+        cmap="Blues",
+        linestyles="-",
+        linewidths=[1],
+        alpha=1,
+        zorder=2,
+    )
+
+    ax.set_yscale("log")
+    ax.set_xscale("log")

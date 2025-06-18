@@ -1,63 +1,70 @@
 import multiprocessing as mp
 import numpy as np
-from DarkNews import const
 
-from alp import exp, models, sim_tools
-from functools import partial
-from multiprocessing import Pool
+from alp import exp, sim_tools
+from alp.exp_dicts import EXPERIMENTS
 from tqdm.contrib.concurrent import process_map
 
 # Pythia8 tau events
-NUMI_files = [
-    f"pythia8_events/tau_events_120GeV_HardOff_pT0.0001_{i}.txt" for i in range(0, 8)
-] + [
-    f"pythia8_events/tau_events_120GeV_HardOff_pT0.0001_v2_{i}.txt" for i in range(0, 8)
-]
+# NUMI_files = [
+#     f"pythia8_events/tau_events_120GeV_HardOff_pT0.0001_{i}.txt" for i in range(0, 8)
+# ] + [
+#     f"pythia8_events/tau_events_120GeV_HardOff_pT0.0001_v2_{i}.txt" for i in range(0, 8)
+# ]
 
-SPS_files = [
-    f"pythia8_events/tau_events_120GeV_HardOff_pT0.0001_{i}.txt" for i in range(0, 8)
+# SPS_files = [
+#     f"pythia8_events/tau_events_120GeV_HardOff_pT0.0001_{i}.txt" for i in range(0, 8)
+# ]
+# LHC_files = [f"pythia8_events/tau_events_LHC_13.6TeV_v6_{i}.txt" for i in range(0, 8)]
+
+# NUMI_files = "tau_events/df_120GeV.parquet"  # In-house MC
+# SPS_files = "tau_events/df_400GeV.parquet"  # In-house MC
+# LHC_files = "pythia8_cluster/pythia8_events_pT10GeV/soft_LHC_13.6TeV_pT13.6TeV"  # Pythia8 events
+
+NUMI_files = [
+    "pythia8_events/soft_NuMI_120GeV_pt1TeV",
+    "pythia8_events/soft_NuMI_120GeV_pt1TeV_v2",
+    "pythia8_events/soft_NuMI_120GeV_pt1TeV_v3",
+    "pythia8_events/soft_SPS_120GeV_pt1TeV",
 ]
-LHC_files = [f"pythia8_events/tau_events_LHC_13.6TeV_v6_{i}.txt" for i in range(0, 8)]
+SPS_files = [
+    "pythia8_events/soft_SPS_400GeV_pt1TeV",
+    "pythia8_events/soft_SPS_400GeV_pt1TeV_v2",
+    "pythia8_events/soft_SPS_400GeV_pt1TeV_v3",
+]
+LHC_files = ["pythia8_events/soft_test_LHC13.6TeV_pt1TeV_weighted"]
 
 
 # Creating the experimental classes
-ICARUS = exp.Experiment(NUMI_files, exp_dic=exp.ICARUS_exp, duplicate_taus=5)
-MICROBOONE = exp.Experiment(NUMI_files, exp_dic=exp.MicroBooNE_exp, duplicate_taus=5)
-NOVA = exp.Experiment(NUMI_files, exp_dic=exp.NoVA_exp, duplicate_taus=3)
+ICARUS = exp.Experiment(NUMI_files, exp_dic=EXPERIMENTS["ICARUS_exp"], duplicate_taus=1)
+MICROBOONE = exp.Experiment(
+    NUMI_files, exp_dic=EXPERIMENTS["MicroBooNE_exp"], duplicate_taus=1
+)
+NOVA = exp.Experiment(NUMI_files, exp_dic=EXPERIMENTS["NoVA_exp"], duplicate_taus=1)
 
-DUNE = exp.Experiment(NUMI_files, exp_dic=exp.DUNE_exp, duplicate_taus=3)
-TWOBYTWO = exp.Experiment(NUMI_files, exp_dic=exp.TwoByTwo_exp, duplicate_taus=3)
+DUNE = exp.Experiment(NUMI_files, exp_dic=EXPERIMENTS["DUNE_exp"])
+TWOBYTWO = exp.Experiment(NUMI_files, exp_dic=EXPERIMENTS["TwoByTwo_exp"])
 TWOBYTWO_ABSORBER = exp.Experiment(
-    NUMI_files, exp_dic=exp.TwoByTwo_absorber_exp, duplicate_taus=3
+    NUMI_files, exp_dic=EXPERIMENTS["TwoByTwo_absorber_exp"]
 )
 
-
-ARGONEUT = exp.Experiment(NUMI_files, exp_dic=exp.ArgoNeuT_exp, duplicate_taus=10)
+ARGONEUT = exp.Experiment(NUMI_files, exp_dic=EXPERIMENTS["ArgoNeuT_exp"])
 ARGONEUT_absorber = exp.Experiment(
-    NUMI_files, exp_dic=exp.ArgoNeuT_absorber_exp, duplicate_taus=10
+    NUMI_files, exp_dic=EXPERIMENTS["ArgoNeuT_absorber_exp"]
 )
 
-CHARM = exp.Experiment(SPS_files, exp_dic=exp.CHARM_exp)
-BEBC = exp.Experiment(SPS_files, exp_dic=exp.BEBC_exp)
-NA62 = exp.Experiment(SPS_files, exp_dic=exp.NA62_exp)
-SHIP = exp.Experiment(SPS_files, exp_dic=exp.SHiP_exp, duplicate_taus=0.2)
+CHARM = exp.Experiment(SPS_files, exp_dic=EXPERIMENTS["CHARM_exp"])
+BEBC = exp.Experiment(SPS_files, exp_dic=EXPERIMENTS["BEBC_exp"])
+# NA62 = exp.Experiment(SPS_files, exp_dic=EXPERIMENTS['NA62_exp'])
+SHIP = exp.Experiment(SPS_files, exp_dic=EXPERIMENTS["SHiP_exp"])
 
-PROTODUNE_NP02 = exp.Experiment(SPS_files, exp_dic=exp.PROTO_DUNE_NP02_exp)
-PROTODUNE_NP04 = exp.Experiment(SPS_files, exp_dic=exp.PROTO_DUNE_NP04_exp)
+PROTODUNE_NP02 = exp.Experiment(SPS_files, exp_dic=EXPERIMENTS["PROTO_DUNE_NP02_exp"])
+PROTODUNE_NP04 = exp.Experiment(SPS_files, exp_dic=EXPERIMENTS["PROTO_DUNE_NP04_exp"])
 
-FASER = exp.Experiment(LHC_files, exp_dic=exp.FASER_exp)
-FASER2 = exp.Experiment(LHC_files, exp_dic=exp.FASER2_exp)
+FASER = exp.Experiment(LHC_files, exp_dic=EXPERIMENTS["FASER_exp"])
+FASER2 = exp.Experiment(LHC_files, exp_dic=EXPERIMENTS["FASER2_exp"])
 
-NPOINTS = 201
-
-
-# def simulate(exp_case, **kwargs):
-#     _ = sim_tools.make_rate_table(exp_case, save=True, **kwargs)
-
-
-# def run_simulations(exp_list, **kwargs):
-#     with Pool() as pool:
-#         pool.map(partial(simulate, **kwargs), exp_list)
+NPOINTS = 21
 
 
 def simulate(args):
@@ -68,52 +75,19 @@ def simulate(args):
 def run_simulations(exp_list, BP_NAME, **kwargs):
     print(f"Running simulations for {BP_NAME}...")
     args_list = [(exp_case, kwargs) for exp_case in exp_list]
-    process_map(simulate, args_list, max_workers=None)
+    process_map(simulate, args_list, max_workers=4)
 
 
 if __name__ == "__main__":
-    mp.set_start_method("spawn")  # or "fork" if you're on Linux
 
-    exp_list = [CHARM, BEBC, SHIP, FASER2, PROTODUNE_NP02, PROTODUNE_NP04, DUNE]
+    mp.set_start_method("spawn")
 
-    # """'
-    #     LFV Ra=5 FA vs ma
+    # exp_list = [CHARM, BEBC, SHIP, FASER2, PROTODUNE_NP02, PROTODUNE_NP04, DUNE]
+
     # """
-    # BP_NAME = "LFV_Ra_5"
-    # c_lepton = np.array([[5, 2, 2], [2, 5, 2], [2, 2, 5]])
-
-    # kwargs = {
-    #     "inv_fa_range": [1e-9, 1e-5],
-    #     "ma_range": [1e-1, 1.7],
-    #     "name": BP_NAME,
-    #     "c_lepton": c_lepton,
-    #     "Npoints": NPOINTS,
-    # }
-
-    # exp_list = [ARGONEUT, ARGONEUT_absorber]
-    # run_simulations(exp_list, BP_NAME, **kwargs)
-
-    # """'
-    #     LFV Ra=1/3 FA vs ma
-    # """
-    # BP_NAME = "LFV_Ra_1o3"
-    # c_lepton = np.array([[0.333, 2, 2], [2, 0.333, 2], [2, 2, 0.333]])
-
-    # kwargs = {
-    #     "inv_fa_range": [1e-9, 1e-5],
-    #     "ma_range": [1e-1, 1.7],
-    #     "name": BP_NAME,
-    #     "c_lepton": c_lepton,
-    #     "Npoints": NPOINTS,
-    # }
-
-    # exp_list = [ARGONEUT, ARGONEUT_absorber]
-    # run_simulations(exp_list, BP_NAME, **kwargs)
-
-    # """'
     #     LFC   FA vs ma
     # """
-    # BP_NAME = "LFC_universal"
+    # BP_NAME = "LFC_universal_vMC"
     # c_lepton = np.diag([1, 1, 1])
 
     # kwargs = {
@@ -164,9 +138,9 @@ if __name__ == "__main__":
     """'
         LFV ANARCHY   FA vs ma
     """
-    BP_NAME = "anarchy"
+    BP_NAME = "anarchy_vMC"
     lamb = 1
-    c_lepton = np.array([[1, lamb**2, lamb], [lamb**2, 1, lamb], [lamb, lamb, 1]])
+    c_lepton = np.ones((3, 3))
 
     kwargs = {
         "inv_fa_range": [1e-10, 1e-3],
@@ -187,8 +161,8 @@ if __name__ == "__main__":
         PROTODUNE_NP02,
         PROTODUNE_NP04,
         DUNE,
-        TWOBYTWO,
-        TWOBYTWO_ABSORBER,
+        # TWOBYTWO,
+        # TWOBYTWO_ABSORBER,
     ]
     run_simulations(exp_list, BP_NAME, **kwargs)
 
@@ -253,3 +227,37 @@ if __name__ == "__main__":
     #     sim_tools.make_rate_table_invfa_vs_Bvis(FASER2, save=True, **kwargs)
     #     sim_tools.make_rate_table_invfa_vs_Bvis(PROTODUNE_NP02, save=True, **kwargs)
     #     sim_tools.make_rate_table_invfa_vs_Bvis(PROTODUNE_NP04, save=True, **kwargs)
+
+    # """'
+    #     LFV Ra=5 FA vs ma
+    # """
+    # BP_NAME = "LFV_Ra_5"
+    # c_lepton = np.array([[5, 2, 2], [2, 5, 2], [2, 2, 5]])
+
+    # kwargs = {
+    #     "inv_fa_range": [1e-9, 1e-5],
+    #     "ma_range": [1e-1, 1.7],
+    #     "name": BP_NAME,
+    #     "c_lepton": c_lepton,
+    #     "Npoints": NPOINTS,
+    # }
+
+    # exp_list = [ARGONEUT, ARGONEUT_absorber]
+    # run_simulations(exp_list, BP_NAME, **kwargs)
+
+    # """'
+    #     LFV Ra=1/3 FA vs ma
+    # """
+    # BP_NAME = "LFV_Ra_1o3"
+    # c_lepton = np.array([[0.333, 2, 2], [2, 0.333, 2], [2, 2, 0.333]])
+
+    # kwargs = {
+    #     "inv_fa_range": [1e-9, 1e-5],
+    #     "ma_range": [1e-1, 1.7],
+    #     "name": BP_NAME,
+    #     "c_lepton": c_lepton,
+    #     "Npoints": NPOINTS,
+    # }
+
+    # exp_list = [ARGONEUT, ARGONEUT_absorber]
+    # run_simulations(exp_list, BP_NAME, **kwargs)

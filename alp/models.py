@@ -2,189 +2,23 @@ import numpy as np
 from scipy.integrate import quad, dblquad
 
 from . import const
+from . import phase_space as ps
 
-lepton_masses = [const.m_e, const.m_mu, const.m_tau]
+
+LEPTON_FINAL_STATES = ["ee", "em", "me", "mm", "et", "te", "tm", "mt", "tt"]
+FINAL_STATES = LEPTON_FINAL_STATES + ["gg", "NN"]
+
+LEPTON_MASSES = [const.m_e, const.m_mu, const.m_tau, 0]
 Gamma_tau = const.get_decay_rate_in_s(2.903e-13)  # GeV is the width of the Tau lepton
 Gamma_mu = const.get_decay_rate_in_s(2.196e-6)  # GeV is the width of the Muon lepton
-lepton_gammas = [0, Gamma_mu, Gamma_tau]
+LEPTON_WIDTHS = [0, Gamma_mu, Gamma_tau]
+LEPTON_INDEX = {"e": 0, "m": 1, "t": 2, "g": 3}
+
 # def g_ps(x):
 #     return 1 - 8 * x - 12 * x**2 * np.log(x) + 8 * x**3 - x**4
 # Gamma_mu = (
 #     const.m_mu**5 * const.Gf**2 / 192 / np.pi**3 * g_ps(const.m_e**2 / const.m_mu**2)
 # )
-
-
-def v_2body(m_parent, m_a, m_l):
-    mask = (m_parent >= m_l + m_a) & (
-        (
-            1
-            - (2 * (m_l**2 + m_a**2) / m_parent**2)
-            + ((m_l**2 - m_a**2) ** 2 / m_parent**4)
-        )
-        > 0
-    )
-    if isinstance(m_a, np.ndarray):
-        v = np.zeros_like(m_a)
-        v[mask] = np.sqrt(
-            1
-            - (2 * (m_l**2 + m_a[mask] ** 2) / m_parent**2)
-            + ((m_l**2 - m_a[mask] ** 2) ** 2 / m_parent**4)
-        )
-    else:
-        if (m_parent >= m_l + m_a) & (
-            (
-                1
-                - (2 * (m_l**2 + m_a**2) / m_parent**2)
-                + ((m_l**2 - m_a**2) ** 2 / m_parent**4)
-            )
-            > 0
-        ):
-            v = np.sqrt(
-                1
-                - (2 * (m_l**2 + m_a**2) / m_parent**2)
-                + ((m_l**2 - m_a**2) ** 2 / m_parent**4)
-            )
-        else:
-            v = 0
-
-    return v
-
-
-def F_lepton_2body(m_parent, m_a, m_l):
-    """Phase space function for l2 --> a l1
-
-    Args:
-        m_parent: parent lepton mass
-        m_a: alp mass
-        m_l: final state lepton mass
-
-    """
-    term1 = (1 + m_l / m_parent) ** 2
-    term2 = (1 - m_l / m_parent) ** 2 - (m_a**2 / m_parent**2)
-    term3 = v_2body(m_parent, m_a, m_l)
-
-    return term1 * term2 * term3
-
-
-def g1_analytic(r):
-    return (
-        2 * r ** (3 / 2) * np.sqrt(4 - r) * np.arccos(np.sqrt(r) / 2)
-        + 1
-        - 2 * r
-        + r**2 * (3 - r) / (1 - r) * np.log(r)
-    )
-
-
-def g1_numeric(r):
-    res, _ = quad(
-        lambda x: 1
-        - x
-        + 2 * r * np.arctanh(((-1 + x) * x) / (2 + x * (-3 + 2 * r + x))),
-        0,
-        1,
-    )
-    return 2 * res
-
-
-def g2_numeric(ma, mi, f_a):
-    Lambda_NP = 4 * np.pi * f_a
-    delta2 = -3
-    r = (ma / mi) ** 2
-    res, _ = dblquad(
-        lambda y, x: (
-            -4 * delta2
-            - (x * (1 - y)) / (x * (1 - y) + r * (1 - x - y))
-            + (x * y) / (r * y - x * y)
-            + 4 * np.log(mi**2 / Lambda_NP**2)
-            + 2 * np.log(x * (1 - y) + r * (1 - x - y))
-            # + 2 * np.log(r * y - x * y)
-        ),
-        0,
-        1,
-        0,
-        lambda x: 1 - x,
-    )
-
-    return -res
-
-
-def l1_numeric(q, ma, ml):
-    res, _ = dblquad(
-        lambda y, x: (1 - x - y * x - 2 * y**2)
-        / (x * (ma / ml) ** 2 + (1 - x - y * x) - q**2 / ml**2 * y * (1 - x - y)),
-        a=0,
-        b=1,
-        gfun=lambda x: 0,
-        hfun=lambda x: 1 - x,
-    )
-    return 2 * res
-
-
-def l2_numeric(q, ma, ml):
-    res, _ = dblquad(
-        lambda y, x: (x * (1 - y))
-        / ((1 - x - y) * (ma / ml) ** 2 - q**2 / ml**2 * y * (1 - x - y) + x * (1 - y))
-        - y * x / (y * (ma / ml) ** 2 - q**2 / ml**2 * y * (1 - x - y) - x * y),
-        a=0,
-        b=1,
-        gfun=lambda x: 0,
-        hfun=lambda x: 1 - x,
-    )
-    return res
-
-
-def g2_analytic(ma, mi, f_a):
-    Lam = 4 * np.pi * f_a
-    delta2 = -3
-    x = (ma / mi) ** 2 * (1 + 0j)
-    return (
-        2 * np.log(Lam**2 / mi**2)
-        + 2 * delta2
-        + 4
-        - x**2 * np.log(x) / (x - 1)
-        + (x - 1) * np.log(x - 1)
-    )
-
-
-# def g2(ma, mi, f_a):
-#     return np.piecewise(
-#         ma, [ma < mi, ma >= mi], [g2_numeric_vec, g2_analytic], mi=mi, f_a=f_a
-#     )
-
-l1_numeric_vec = np.vectorize(l1_numeric)
-l2_numeric_vec = np.vectorize(l2_numeric)
-g1_numeric_vec = np.vectorize(g1_numeric)
-g2_numeric_vec = np.vectorize(g2_numeric)
-
-
-def g1(ma, mi):
-    r = (ma / mi) ** 2
-    return np.piecewise(r, [r < 1, r >= 1], [g1_analytic, g1_numeric_vec])
-
-
-def g2(ma, mi, f_a):
-    return g2_analytic(ma, mi, f_a)
-
-
-def l1(q, ma, mi):
-    return l1_numeric_vec(q, ma, mi)
-
-
-def l2(q, ma, mi):
-    return l2_numeric_vec(q, ma, mi)
-
-
-def B1_loop(tau):
-    f = np.piecewise(
-        tau,
-        [tau >= 1, tau < 1],
-        [
-            lambda tau: np.arcsin(1 / np.sqrt(tau)),
-            lambda tau: np.pi / 2
-            + 1j / 2 * np.log((1 + np.sqrt(1 - tau)) / (1 - np.sqrt(1 - tau))),
-        ],
-    )
-    return 1 - tau * np.abs(f) ** 2
 
 
 class ALP:
@@ -217,110 +51,65 @@ class ALP:
         # Heavy neutrino couplings
         self.c_NN = c_NN
 
+        # Decay widths
+        for daughters in LEPTON_FINAL_STATES:
+            vars(self)[f"Gamma_a_to_{daughters}"] = self.get_Gamma_a_to_li_lj(
+                LEPTON_INDEX[daughters[0]], LEPTON_INDEX[daughters[1]]
+            )
+        # Other channels
+        self.Gamma_a_to_gg = self.get_Gamma_a_to_gg()
+        self.Gamma_a_to_NN = self.get_Gamma_a_to_NN()
+
         # Visible decay widths
-        self.Gamma_a_vis = (
-            self.Gamma_a_to_ee()
-            + self.Gamma_a_to_me()
-            + self.Gamma_a_to_em()
-            + self.Gamma_a_to_mm()
-            + self.Gamma_a_to_te()
-            + self.Gamma_a_to_et()
-            + self.Gamma_a_to_tm()
-            + self.Gamma_a_to_mt()
-            + self.Gamma_a_to_tt()
-            + self.Gamma_a_to_gg()
-            + self.Gamma_a_to_NN()
+        self.Gamma_a_vis = self.Gamma_a_to_gg + np.sum(
+            [
+                vars(self)["Gamma_a_to_" + daughters]
+                for daughters in LEPTON_FINAL_STATES
+            ],
+            axis=0,
         )
+
         # Invisible decay width
         self.Bvis = Bvis
         self.Binv = 1 - self.Bvis
         self.Gamma_a_inv = self.Gamma_a_vis * (1 - self.Bvis) / self.Bvis
         self.Gamma_a = self.Gamma_a_vis + self.Gamma_a_inv
 
-        # Channels are labeled as a -> l+ l-
+        if isinstance(self.Gamma_a, np.ndarray):
 
-        if len(np.array([self.Gamma_a])) > 1:
-            self.BR_a_to_ee = np.empty_like(self.Gamma_a)
-            self.BR_a_to_me = np.empty_like(self.Gamma_a)
-            self.BR_a_to_me = np.empty_like(self.Gamma_a)
-            self.BR_a_to_em = np.empty_like(self.Gamma_a)
-            self.BR_a_to_mm = np.empty_like(self.Gamma_a)
-            self.BR_a_to_te = np.empty_like(self.Gamma_a)
-            self.BR_a_to_et = np.empty_like(self.Gamma_a)
-            self.BR_a_to_tm = np.empty_like(self.Gamma_a)
-            self.BR_a_to_mt = np.empty_like(self.Gamma_a)
-            self.BR_a_to_tt = np.empty_like(self.Gamma_a)
-            self.BR_a_to_gg = np.empty_like(self.Gamma_a)
-            self.BR_a_to_NN = np.empty_like(self.Gamma_a)
+            # creating branching ratios
+            for daughters in FINAL_STATES:
+                vars(self)[f"BR_a_to_{daughters}"] = np.empty_like(self.Gamma_a)
             self.BR_a_to_inv = np.empty_like(self.Gamma_a)
 
-            self.BR_a_to_ee[self.Gamma_a > 0] = (
-                self.Gamma_a_to_ee()[self.Gamma_a > 0] / self.Gamma_a[self.Gamma_a > 0]
-            )
-            self.BR_a_to_ee[self.Gamma_a <= 0] = 0
-            self.BR_a_to_me[self.Gamma_a > 0] = (
-                self.Gamma_a_to_me()[self.Gamma_a > 0] / self.Gamma_a[self.Gamma_a > 0]
-            )
-            self.BR_a_to_me[self.Gamma_a <= 0] = 0
-            self.BR_a_to_em[self.Gamma_a > 0] = (
-                self.Gamma_a_to_em()[self.Gamma_a > 0] / self.Gamma_a[self.Gamma_a > 0]
-            )
-            self.BR_a_to_em[self.Gamma_a <= 0] = 0
-            self.BR_a_to_mm[self.Gamma_a > 0] = (
-                self.Gamma_a_to_mm()[self.Gamma_a > 0] / self.Gamma_a[self.Gamma_a > 0]
-            )
-            self.BR_a_to_mm[self.Gamma_a <= 0] = 0
-            self.BR_a_to_te[self.Gamma_a > 0] = (
-                self.Gamma_a_to_te()[self.Gamma_a > 0] / self.Gamma_a[self.Gamma_a > 0]
-            )
-            self.BR_a_to_te[self.Gamma_a <= 0] = 0
-            self.BR_a_to_et[self.Gamma_a > 0] = (
-                self.Gamma_a_to_et()[self.Gamma_a > 0] / self.Gamma_a[self.Gamma_a > 0]
-            )
-            self.BR_a_to_et[self.Gamma_a <= 0] = 0
+            # Assigning branching ratios
+            for daughters in FINAL_STATES:
+                vars(self)[f"BR_a_to_{daughters}"][self.Gamma_a > 0] = (
+                    vars(self)[f"Gamma_a_to_{daughters}"][self.Gamma_a > 0]
+                    / self.Gamma_a[self.Gamma_a > 0]
+                )
 
-            self.BR_a_to_tm[self.Gamma_a > 0] = (
-                self.Gamma_a_to_tm()[self.Gamma_a > 0] / self.Gamma_a[self.Gamma_a > 0]
-            )
-            self.BR_a_to_tm[self.Gamma_a <= 0] = 0
-            self.BR_a_to_mt[self.Gamma_a > 0] = (
-                self.Gamma_a_to_mt()[self.Gamma_a > 0] / self.Gamma_a[self.Gamma_a > 0]
-            )
-            self.BR_a_to_mt[self.Gamma_a <= 0] = 0
-
-            self.BR_a_to_tt[self.Gamma_a > 0] = (
-                self.Gamma_a_to_tt()[self.Gamma_a > 0] / self.Gamma_a[self.Gamma_a > 0]
-            )
-            self.BR_a_to_tt[self.Gamma_a <= 0] = 0
-
-            self.BR_a_to_gg[self.Gamma_a > 0] = (
-                self.Gamma_a_to_gg()[self.Gamma_a > 0] / self.Gamma_a[self.Gamma_a > 0]
-            )
-            self.BR_a_to_gg[self.Gamma_a <= 0] = 0
-            self.BR_a_to_NN[self.Gamma_a > 0] = (
-                self.Gamma_a_to_NN()[self.Gamma_a > 0] / self.Gamma_a[self.Gamma_a > 0]
-            )
-            self.BR_a_to_NN[self.Gamma_a <= 0] = 0
+                vars(self)[f"BR_a_to_{daughters}"][self.Gamma_a <= 0] = 0
 
             self.BR_a_to_inv[self.Gamma_a > 0] = (
                 self.Gamma_a_inv[self.Gamma_a > 0] / self.Gamma_a[self.Gamma_a > 0]
             )
-            self.BR_a_to_inv[self.Gamma_a > 0] = 0
+            self.BR_a_to_inv[self.Gamma_a <= 0] = 0
 
         else:
-            self.BR_a_to_ee = self.Gamma_a_to_ee() / self.Gamma_a * (self.Gamma_a > 0)
-            self.BR_a_to_me = self.Gamma_a_to_me() / self.Gamma_a * (self.Gamma_a > 0)
-            self.BR_a_to_em = self.Gamma_a_to_em() / self.Gamma_a * (self.Gamma_a > 0)
-            self.BR_a_to_mm = self.Gamma_a_to_mm() / self.Gamma_a * (self.Gamma_a > 0)
-            self.BR_a_to_et = self.Gamma_a_to_et() / self.Gamma_a * (self.Gamma_a > 0)
-            self.BR_a_to_te = self.Gamma_a_to_te() / self.Gamma_a * (self.Gamma_a > 0)
-            self.BR_a_to_tm = self.Gamma_a_to_tm() / self.Gamma_a * (self.Gamma_a > 0)
-            self.BR_a_to_mt = self.Gamma_a_to_mt() / self.Gamma_a * (self.Gamma_a > 0)
-            self.BR_a_to_tt = self.Gamma_a_to_tt() / self.Gamma_a * (self.Gamma_a > 0)
-            self.BR_a_to_gg = self.Gamma_a_to_gg() / self.Gamma_a * (self.Gamma_a > 0)
-            self.BR_a_to_NN = self.Gamma_a_to_NN() / self.Gamma_a * (self.Gamma_a > 0)
-            self.BR_a_to_inv = self.Gamma_a_inv / self.Gamma_a * (self.Gamma_a > 0)
+            # Assigning branching ratios
+            self.BR_a_to_inv = np.empty_like(self.Gamma_a)
+            for daughters in FINAL_STATES:
+                vars(self)[f"BR_a_to_{daughters}"] = (
+                    vars(self)[f"Gamma_a_to_{daughters}"] / self.Gamma_a
+                    if self.Gamma_a > 0
+                    else 0
+                )
+            self.BR_a_to_inv = (
+                self.Gamma_a_inv / self.Gamma_a if self.Gamma_a > 0 else 0
+            )
 
+        # Decay kinematics
         self.Ea_min = {
             "tau>nu+rho+a": self.m_a,
             "tau>nu+pi+a": self.m_a,
@@ -353,7 +142,11 @@ class ALP:
 
     def prob_decay(self, Ea, L, dL):
         gamma = Ea / self.m_a
-        beta = np.sqrt(1 - 1 / gamma**2)
+        if isinstance(Ea, np.ndarray):
+            beta = np.ones_like(Ea)
+            beta[gamma > 1] = np.sqrt(1 - 1 / gamma[gamma > 1] ** 2)
+        else:
+            beta = np.sqrt(1 - 1 / gamma**2)
         ell_dec = const.get_decay_rate_in_cm(self.Gamma_a) * gamma * beta
         p = np.empty_like(ell_dec)
         # p[ell_dec > 0] = np.exp(-L / ell_dec[ell_dec > 0]) * (
@@ -365,22 +158,23 @@ class ALP:
 
     def c_gg_eff(self):
         if isinstance(self.m_a, np.ndarray):
-            c = np.zeros_like(self.m_a)
+            c = np.zeros_like(self.m_a, dtype=complex)
             c[self.m_a > 0] = (
                 self.c_lepton[0, 0]
-                * B1_loop((2 * const.m_e / self.m_a[self.m_a > 0]) ** 2)
+                * ps.B1_loop((2 * const.m_e / self.m_a[self.m_a > 0]) ** 2)
                 + self.c_lepton[1, 1]
-                * B1_loop((2 * const.m_mu / self.m_a[self.m_a > 0]) ** 2)
+                * ps.B1_loop((2 * const.m_mu / self.m_a[self.m_a > 0]) ** 2)
                 + self.c_lepton[2, 2]
-                * B1_loop((2 * const.m_tau / self.m_a[self.m_a > 0]) ** 2)
+                * ps.B1_loop((2 * const.m_tau / self.m_a[self.m_a > 0]) ** 2)
             )
             return c
         else:
             if self.m_a:
                 return (
-                    self.c_lepton[0, 0] * B1_loop((2 * const.m_e / self.m_a) ** 2)
-                    + self.c_lepton[1, 1] * B1_loop((2 * const.m_mu / self.m_a) ** 2)
-                    + self.c_lepton[2, 2] * B1_loop((2 * const.m_tau / self.m_a) ** 2)
+                    self.c_lepton[0, 0] * ps.B1_loop((2 * const.m_e / self.m_a) ** 2)
+                    + self.c_lepton[1, 1] * ps.B1_loop((2 * const.m_mu / self.m_a) ** 2)
+                    + self.c_lepton[2, 2]
+                    * ps.B1_loop((2 * const.m_tau / self.m_a) ** 2)
                 )
             else:
                 return 0
@@ -427,40 +221,53 @@ class ALP:
 
         return Gamma
 
-    def Gamma_a_to_ee(self):
-        return self.c_lepton[0, 0] ** 2 * self.F_alp_2body(const.m_e, const.m_e)
-
-    def Gamma_a_to_me(self):
-        return self.c_lepton[0, 1] ** 2 * self.F_alp_2body(const.m_mu, const.m_e)
-
-    def Gamma_a_to_em(self):
-        return self.c_lepton[1, 0] ** 2 * self.F_alp_2body(const.m_e, const.m_mu)
-
-    def Gamma_a_to_mm(self):
-        return self.c_lepton[1, 1] ** 2 * self.F_alp_2body(const.m_mu, const.m_mu)
-
-    def Gamma_a_to_et(self):
-        return self.c_lepton[0, 2] ** 2 * self.F_alp_2body(const.m_e, const.m_tau)
-
-    def Gamma_a_to_te(self):
-        return self.c_lepton[2, 0] ** 2 * self.F_alp_2body(const.m_tau, const.m_e)
-
-    def Gamma_a_to_mt(self):
-        return self.c_lepton[1, 2] ** 2 * self.F_alp_2body(const.m_mu, const.m_tau)
-
-    def Gamma_a_to_tm(self):
-        return self.c_lepton[2, 1] ** 2 * self.F_alp_2body(const.m_tau, const.m_mu)
-
-    def Gamma_a_to_tt(self):
-        return self.c_lepton[2, 2] ** 2 * self.F_alp_2body(const.m_tau, const.m_tau)
-
-    def Gamma_a_to_gg(self):
-        return (
-            self.c_gg**2 * self.m_a**3 * const.alphaQED**2 / 64 / np.pi**3 / self.f_a**2
+    def get_Gamma_a_to_li_lj(self, l_i, l_j):
+        """two body phase space of alp decays"""
+        return self.c_lepton[l_i, l_j] ** 2 * self.F_alp_2body(
+            LEPTON_MASSES[l_i], LEPTON_MASSES[l_j]
         )
 
-    def Gamma_a_to_NN(self):
+    def get_BR_a_to_li_lj(self, l_i, l_j):
+        """branching ratio to leptons"""
+        return self.get_Gamma_a_to_li_lj(self, l_i, l_j) / self.Gamma_a
+
+    def get_Gamma_a_to_gg(self):
+        return (
+            np.abs(self.c_gg) ** 2
+            * self.m_a**3
+            * const.alphaQED**2
+            / 64
+            / np.pi**3
+            / self.f_a**2
+        )
+
+    def get_Gamma_a_to_NN(self):
         return self.c_NN**2 * self.F_alp_2body(self.mN, self.mN)
+
+    def alp_BR(self, final_state):
+        """Branching ratio for alp -> l+ l-"""
+        if final_state == "ee":
+            return self.BR_a_to_ee
+        elif final_state == "em":
+            return self.BR_a_to_em
+        elif final_state == "me":
+            return self.BR_a_to_me
+        elif final_state == "mm":
+            return self.BR_a_to_mm
+        elif final_state == "et":
+            return self.BR_a_to_et
+        elif final_state == "te":
+            return self.BR_a_to_te
+        elif final_state == "tm":
+            return self.BR_a_to_tm
+        elif final_state == "mt":
+            return self.BR_a_to_mt
+        elif final_state == "tt":
+            return self.BR_a_to_tt
+        elif final_state == "gg":
+            return self.BR_a_to_gg
+        else:
+            raise ValueError(f"Unknown final state {final_state}")
 
     def alp_visible_BR(self, final_states):
         return (
@@ -517,10 +324,10 @@ class ALP:
             self.c_lepton[l_i, l_j] ** 2
             / 64
             / np.pi
-            * lepton_masses[l_i] ** 3
+            * LEPTON_MASSES[l_i] ** 3
             / self.f_a**2
-            * F_lepton_2body(lepton_masses[l_i], self.m_a, lepton_masses[l_j])
-            / lepton_gammas[l_i]
+            * ps.F_lepton_2body(LEPTON_MASSES[l_i], self.m_a, LEPTON_MASSES[l_j])
+            / LEPTON_WIDTHS[l_i]
         )
 
     """
@@ -564,7 +371,7 @@ class ALP:
                 * (const.m_tau**2 + mtau_barSQR)
                 / (const.m_tau**2 - mtau_barSQR) ** 2
             )
-            * v_2body(const.m_tau, np.sqrt(mtau_barSQR), self.m_a)
+            * ps.v_2body(const.m_tau, np.sqrt(mtau_barSQR), self.m_a)
         )
         return (
             dGammadE
@@ -592,7 +399,7 @@ class ALP:
                 * (const.m_tau**2 + mtau_barSQR)
                 / (const.m_tau**2 - mtau_barSQR) ** 2
             )
-            * v_2body(const.m_tau, np.sqrt(mtau_barSQR), self.m_a)
+            * ps.v_2body(const.m_tau, np.sqrt(mtau_barSQR), self.m_a)
         )
         return (
             dGammadE
@@ -618,7 +425,7 @@ class ALP:
                 * (const.m_tau**2 + mtau_barSQR)
                 / (const.m_tau**2 - mtau_barSQR) ** 2
             )
-            * v_2body(const.m_tau, np.sqrt(mtau_barSQR), self.m_a)
+            * ps.v_2body(const.m_tau, np.sqrt(mtau_barSQR), self.m_a)
         )
         return (
             dGammadE
@@ -644,7 +451,7 @@ class ALP:
                 * (const.m_tau**2 + mtau_barSQR)
                 / (const.m_tau**2 - mtau_barSQR) ** 2
             )
-            * v_2body(const.m_tau, np.sqrt(mtau_barSQR), self.m_a)
+            * ps.v_2body(const.m_tau, np.sqrt(mtau_barSQR), self.m_a)
         )
         return (
             dGammadE
@@ -659,10 +466,10 @@ class ALP:
             const.m_mu**3
             / 8
             / np.pi
-            * (1 - (lepton_masses[l_j] / lepton_masses[l_i]) ** 2)
+            * (1 - (LEPTON_MASSES[l_j] / LEPTON_MASSES[l_i]) ** 2)
         )
         FFSQR = np.abs(
-            self.F2_5(self.m_a, l_i=l_i, l_j=l_j) ** 2
+            np.abs(self.F2_5(self.m_a, l_i=l_i, l_j=l_j)) ** 2
             + np.abs(self.F2(self.m_a, l_i=l_i, l_j=l_j)) ** 2
         )
         return Gamma * FFSQR / Gamma_mu
@@ -681,12 +488,12 @@ class ALP:
         F3_5_s23 = self.F3_5(s23, l_i=l_i, l_j=l_j)
 
         s13 = (
-            self.m_a**2 + lepton_masses[l_i] ** 2 + lepton_masses[l_j] ** 2 - s12 - s23
+            self.m_a**2 + LEPTON_MASSES[l_i] ** 2 + LEPTON_MASSES[l_j] ** 2 - s12 - s23
         )
 
         # Denominator factors like (s23 - m_a^2 + i m_a Gamma_a)
         denom_s23 = s23 - self.m_a**2 + 1j * self.m_a * self.Gamma_a
-        denom_s13_p = s13 - self.m_a**2 + 1j * self.m_a * self.Gamma_a
+        # denom_s13_p = s13 - self.m_a**2 + 1j * self.m_a * self.Gamma_a
         denom_s13_m = s13 - self.m_a**2 - 1j * self.m_a * self.Gamma_a
 
         # Absolute square of denom_s23:
@@ -704,8 +511,8 @@ class ALP:
         prefactor = (
             (self.c_lepton[l_i, l_j] ** 2 + self.c_lepton[l_j, l_i] ** 2)
             * abs(self.c_lepton[l_i, l_i]) ** 2
-            * lepton_masses[l_j] ** 2
-            * lepton_masses[l_i] ** 2
+            * LEPTON_MASSES[l_j] ** 2
+            * LEPTON_MASSES[l_i] ** 2
             / self.f_a**4
         )
 
@@ -738,7 +545,7 @@ class ALP:
 
         termA = 2.0 * (s12 + s13) * re_F2F3
         termB = (1.0 / s23) * (
-            (lepton_masses[l_i] ** 2 * (s12 + s13) - 2.0 * s12 * s13)
+            (LEPTON_MASSES[l_i] ** 2 * (s12 + s13) - 2.0 * s12 * s13)
             * (abs(F2_s23) ** 2 + abs(F2_5_s23) ** 2)
         )
         # etc.  Build them all up and sum:
@@ -760,7 +567,7 @@ class ALP:
             2.0
             * const.eQED
             * s23
-            * lepton_masses[l_j]
+            * LEPTON_MASSES[l_j]
             / (self.f_a**2)
             * self.c_lepton[l_j, l_j]
             * bracket_3_real
@@ -783,11 +590,11 @@ class ALP:
     #     curlyF = (
     #         self.m_a**6
     #         - s23**2 * (s12 + s23)
-    #         - self.m_a**4 * (2 * lepton_masses[l_i] ** 2 + s12 + s23)
-    #         + 2 * lepton_masses[l_i] ** 2 * (s12 + s23) * (2 * s12 + s23)
-    #         - 2 * lepton_masses[l_i] ** 4 * (4 * s12 + s23)
+    #         - self.m_a**4 * (2 * LEPTON_MASSES[l_i] ** 2 + s12 + s23)
+    #         + 2 * LEPTON_MASSES[l_i] ** 2 * (s12 + s23) * (2 * s12 + s23)
+    #         - 2 * LEPTON_MASSES[l_i] ** 4 * (4 * s12 + s23)
     #         + self.m_a**2
-    #         * (2 * lepton_masses[l_i] ** 4 + 4 * lepton_masses[l_i] ** 2 * s12 + s23**2)
+    #         * (2 * LEPTON_MASSES[l_i] ** 4 + 4 * LEPTON_MASSES[l_i] ** 2 * s12 + s23**2)
     #     )
     #     curlyF /= denom
 
@@ -796,7 +603,7 @@ class ALP:
     #         / 4
     #         / np.pi**2
     #         / 32
-    #         / lepton_masses[l_i]
+    #         / LEPTON_MASSES[l_i]
     #         * curlyF
     #         * (self.c_lepton[l_i, l_j] ** 2 + self.c_lepton[l_j, l_i] ** 2)
     #         / self.f_a**2
@@ -810,8 +617,8 @@ class ALP:
             z: 2 E_a/m_i
         """
 
-        eta = self.m_a**2 / lepton_masses[l_i] ** 2
-        z = 2 * Ea / lepton_masses[l_i]
+        eta = self.m_a**2 / LEPTON_MASSES[l_i] ** 2
+        z = 2 * Ea / LEPTON_MASSES[l_i]
         Integrand = (
             -0.5 * ((-10 + 4 * eta + 3 * z) * Sqrt(-4 * eta + Power(z, 2)))
             - (5 + (-2 + eta) * eta + (-4 + z) * z)
@@ -821,13 +628,13 @@ class ALP:
         ) / (-1 - eta + z)
 
         return (
-            lepton_masses[l_i] ** 3
+            LEPTON_MASSES[l_i] ** 3
             * const.alphaQED
             / 32
             / np.pi**2
             * Integrand
-            * (2 / lepton_masses[l_i])
-            * (Ea < lepton_masses[l_i] * (1 - eta))
+            * (2 / LEPTON_MASSES[l_i])
+            * (Ea < LEPTON_MASSES[l_i] * (1 - eta))
             * (self.m_a < Ea)
             * (self.c_lepton[l_i, l_j] ** 2 + self.c_lepton[l_j, l_i] ** 2)
         )
@@ -838,13 +645,13 @@ class ALP:
             x: 2 E_j/m_i
             y: 2 E_gamma/m_i
         """
-        eta = m_a**2 / lepton_masses[l_i] ** 2
+        eta = m_a**2 / LEPTON_MASSES[l_i] ** 2
         denom = y**2 * (1 - x - y - eta)
         num = y * (1 - x**2 - eta**2) - 2 * (1 - eta) * (1 - x - eta)
 
         if denom != 0:
             return (
-                lepton_masses[l_i] ** 3
+                LEPTON_MASSES[l_i] ** 3
                 * const.alphaQED
                 / 32
                 / np.pi**2
@@ -860,36 +667,36 @@ class ALP:
     ):
         """Branching ratio for l_i -> l_j + a + gamma"""
 
-        eta = self.m_a**2 / lepton_masses[l_i] ** 2
+        eta = self.m_a**2 / LEPTON_MASSES[l_i] ** 2
 
         # if isinstance(self.m_a, np.ndarray) and self.m_a.ndim == 2:
         # Gamma_a = 0
         # else:
         Gamma_a, _ = dblquad(
             lambda x, y: self.BR_diff_li_to_lj_a_gamma_normed(x, y, l_i, l_j, self.m_a)
-            * (y > 2 * E_gamma_min / lepton_masses[l_i])
-            * (x > 2 * E_e_min / lepton_masses[l_i])
+            * (y > 2 * E_gamma_min / LEPTON_MASSES[l_i])
+            * (x > 2 * E_e_min / LEPTON_MASSES[l_i])
             * ((1 + 2 * (1 - x - y - eta) / x / y) < np.cos(theta_eg_min)),
-            a=2 * E_gamma_min / lepton_masses[l_i],
+            a=2 * E_gamma_min / LEPTON_MASSES[l_i],
             b=1 - eta,
-            gfun=lambda y: max((1 - y - eta), 2 * E_e_min / lepton_masses[l_i]),
+            gfun=lambda y: max((1 - y - eta), 2 * E_e_min / LEPTON_MASSES[l_i]),
             hfun=lambda y: (1 - y - eta) / (1 - y),
         )
 
-        return Gamma_a / self.f_a**2 / lepton_gammas[l_i]
+        return Gamma_a / self.f_a**2 / LEPTON_WIDTHS[l_i]
 
     # def BR_li_to_lj_a_gamma(self, l_i, l_j):
     #     """Branching ratio for mu -> e + a + gamma"""
 
     #     Gamma_a, _ = dblquad(
     #         lambda s23, s12: self.BR_diff_li_to_lj_a_gamma(s12, s23, l_i, l_j),
-    #         a=s12_min(lepton_masses[l_i], lepton_masses[l_j], 0, self.m_a),
-    #         b=s12_max(lepton_masses[l_i], lepton_masses[l_j], 0, self.m_a),
+    #         a=s12_min(LEPTON_MASSES[l_i], LEPTON_MASSES[l_j], 0, self.m_a),
+    #         b=s12_max(LEPTON_MASSES[l_i], LEPTON_MASSES[l_j], 0, self.m_a),
     #         gfun=lambda s12: s23_min(
-    #             s12, lepton_masses[l_i], lepton_masses[l_j], 0, self.m_a
+    #             s12, LEPTON_MASSES[l_i], LEPTON_MASSES[l_j], 0, self.m_a
     #         ),
     #         hfun=lambda s12: s23_max(
-    #             s12, lepton_masses[l_i], lepton_masses[l_j], 0, self.m_a
+    #             s12, LEPTON_MASSES[l_i], LEPTON_MASSES[l_j], 0, self.m_a
     #         ),
     #     )
     #     return Gamma_a / Gamma_mu
@@ -903,19 +710,19 @@ class ALP:
             l_j: index of the second lepton
         """
         return (
-            -lepton_masses[l_i]
+            -LEPTON_MASSES[l_i]
             * const.eQED
             / self.f_a**2
             / 16
             / np.pi**2
             * (self.c_lepton[l_i, l_j] + self.c_lepton[l_j, l_i])
             * (
-                0.25 * self.c_lepton[l_i, l_i] * g1(q, lepton_masses[l_i])
+                0.25 * self.c_lepton[l_i, l_i] * ps.g1(q, LEPTON_MASSES[l_i])
                 + const.alphaQED
                 / 4
                 / np.pi
                 * self.c_gg
-                * g2(q, lepton_masses[l_i], self.f_a)
+                * ps.g2(q, LEPTON_MASSES[l_i], self.f_a)
             )
         )
 
@@ -928,19 +735,19 @@ class ALP:
             l_j: index of the second lepton
         """
         return (
-            -lepton_masses[l_i]
+            -LEPTON_MASSES[l_i]
             * const.eQED
             / self.f_a**2
             / 16
             / np.pi**2
             * (self.c_lepton[l_i, l_j] - self.c_lepton[l_j, l_i])
             * (
-                0.25 * self.c_lepton[l_i, l_i] * g1(q, lepton_masses[l_i])
+                0.25 * self.c_lepton[l_i, l_i] * ps.g1(q, LEPTON_MASSES[l_i])
                 + const.alphaQED
                 / 4
                 / np.pi
                 * self.c_gg
-                * g2(q, lepton_masses[l_i], self.f_a)
+                * ps.g2(q, LEPTON_MASSES[l_i], self.f_a)
             )
         )
 
@@ -953,19 +760,19 @@ class ALP:
             l_j: index of the second lepton
         """
         return (
-            -lepton_masses[l_i]
+            -LEPTON_MASSES[l_i]
             * const.eQED
             / self.f_a**2
             / 16
             / np.pi**2
             * (self.c_lepton[l_i, l_j] - self.c_lepton[l_j, l_i])
             * (
-                0.25 * self.c_lepton[l_i, l_i] * l1(q, lepton_masses[l_i], self.m_a)
+                0.25 * self.c_lepton[l_i, l_i] * ps.l1(q, LEPTON_MASSES[l_i], self.m_a)
                 + const.alphaQED
                 / 4
                 / np.pi
                 * self.c_gg
-                * l2(q, lepton_masses[l_i], self.f_a)
+                * ps.l2(q, LEPTON_MASSES[l_i], self.f_a)
             )
         )
 
@@ -978,19 +785,19 @@ class ALP:
             l_j: index of the second lepton
         """
         return (
-            -lepton_masses[l_i]
+            -LEPTON_MASSES[l_i]
             * const.eQED
             / self.f_a**2
             / 16
             / np.pi**2
             * (self.c_lepton[l_i, l_j] + self.c_lepton[l_j, l_i])
             * (
-                0.25 * self.c_lepton[l_i, l_i] * l1(q, lepton_masses[l_i], self.m_a)
+                0.25 * self.c_lepton[l_i, l_i] * ps.l1(q, LEPTON_MASSES[l_i], self.m_a)
                 + const.alphaQED
                 / 4
                 / np.pi
                 * self.c_gg
-                * l2(q, lepton_masses[l_i], self.f_a)
+                * ps.l2(q, LEPTON_MASSES[l_i], self.f_a)
             )
         )
 
@@ -1004,9 +811,9 @@ class ALP:
             self.c_lepton[l_i, l_j] ** 2
             / 16
             / np.pi**2
-            * (lepton_masses[l_i] + lepton_masses[l_j]) ** 2
+            * (LEPTON_MASSES[l_i] + LEPTON_MASSES[l_j]) ** 2
             / self.f_a**2
-        ) * (self.m_a < 3.686 - lepton_masses[l_i] - lepton_masses[l_j])
+        ) * (self.m_a < 3.686 - LEPTON_MASSES[l_i] - LEPTON_MASSES[l_j])
         if l_i == 2 or l_j == 2:
             return Brfactor * 3e-3
         else:
@@ -1015,6 +822,63 @@ class ALP:
     """
     END Estimates of Onia to ALPs
     """
+
+    def delta_a_mag_mom(self, l_i):
+        """Return the coupling explaining the delta_amu for a certain mz.
+        The contribution of the model to the the a_mu is given by:
+        delta_amu = factor * coupling^2 * m_ratio^2 * integrand_function(m_ratio)
+        """
+        x = (self.m_a / LEPTON_MASSES[l_i]) ** 2 * (1.0 + 0.0j)
+        prefactor = -(
+            (LEPTON_MASSES[l_i] * self.c_lepton[l_i, l_i] / self.f_a / 4 / np.pi) ** 2
+        )
+        muSQR = (1e3) ** 2  # TeV^2, scale for the running of alphaQED
+        delta_a = prefactor * (
+            h1_gminus2(x)
+            # + 2
+            # * const.alphaQED
+            # / np.pi
+            # * self.c_gg
+            # / self.c_lepton[l_i, l_i]
+            # * (np.log(muSQR / LEPTON_MASSES[l_i] ** 2) - h2_gminus2(x))
+        )
+        return delta_a
+
+
+# Expressions from Bauer et al (https://arxiv.org/pdf/2110.10698)
+def h_gminus2(x):
+    return 2 * x**2 / (x - 1) ** 3 * np.log(x) - (3 * x - 1) / (x - 1) ** 2
+
+
+def j_gminus2(x):
+    return 1 + 2 * x - 2 * x**2 * np.log(x / (x - 1))
+
+
+def h1_gminus2(x):
+    return np.where(
+        x < 4,
+        1
+        + 2 * x
+        + (1 - x) * x * np.log(x)
+        - 2 * x * (3 - x) * np.sqrt(x / (4 - x)) * np.arccos(np.sqrt(x) / 2),
+        1
+        + 2 * x
+        + (1 - x) * x * np.log(x)
+        - 2 * x * (3 - x) * np.sqrt(x / (x - 4)) * np.arccosh(np.sqrt(x) / 2),
+    )
+
+
+def h2_gminus2(x):
+    return np.where(
+        x < 4,
+        1
+        - x / 3
+        + x**2 * np.log(x)
+        + (x + 2) / 3 * np.sqrt((4 - x) * x) * np.arccos(np.sqrt(x) / 2),
+        1 - x / 3
+        # + x**2 * np.log(x)
+        - (x + 2) / 3 * np.sqrt((x - 4) * x) * np.arccosh(np.sqrt(x) / 2),
+    )
 
 
 def s23_max(s12, M, m1, m2, m3):
@@ -1102,79 +966,79 @@ def Iv_mvv_integral(Ea, ma, mlep, mtau=const.m_tau):
 #
 
 
-def M_squared_sym(
-    s12,
-    s13,
-    s23,
-    m_e,
-    m_mu,
-    f_a,
-    m_a,
-    Gamma_a,
-    c_ee,
-    ke_12,
-    kE_12,
-    e,
-    # F2 etc. at both s23 and s13
-    F2_s23,
-    F2_5_s23,
-    F3_s23,
-    F3_5_s23,
-    F2_s13,
-    F2_5_s13,
-    F3_s13,
-    F3_5_s13,
-):
-    """
-    Returns the *fully symmetrized* |M|^2 = expression + (1 <-> 2).
-    """
-    # The original piece:
-    val = M_squared(
-        s12,
-        s13,
-        s23,
-        m_e,
-        m_mu,
-        f_a,
-        m_a,
-        Gamma_a,
-        c_ee,
-        ke_12,
-        kE_12,
-        e,
-        F2_s23,
-        F2_5_s23,
-        F3_s23,
-        F3_5_s23,
-        F2_s13,
-        F2_5_s13,
-        F3_s13,
-        F3_5_s13,
-    )
-    # The swapped piece (swap s12 <-> s13, also swap the form-factor inputs that
-    # used to go with s13 vs. s12):
-    val_swapped = M_squared(
-        s13,
-        s12,
-        s23,
-        m_e,
-        m_mu,
-        f_a,
-        m_a,
-        Gamma_a,
-        c_ee,
-        ke_12,
-        kE_12,
-        e,
-        # notice we swap which F_*(sXX) we pass in
-        F2_s23=F2_s23,
-        F2_5_s23=F2_5_s23,
-        F3_s23=F3_s23,
-        F3_5_s23=F3_5_s23,
-        F2_s13=F2_s12,
-        F2_5_s13=F2_5_s12,
-        F3_s13=F3_s12,
-        F3_5_s13=F3_5_s12,
-    )
-    # sum them
-    return val + val_swapped
+# def M_squared_sym(
+#     s12,
+#     s13,
+#     s23,
+#     m_e,
+#     m_mu,
+#     f_a,
+#     m_a,
+#     Gamma_a,
+#     c_ee,
+#     ke_12,
+#     kE_12,
+#     e,
+#     # F2 etc. at both s23 and s13
+#     F2_s23,
+#     F2_5_s23,
+#     F3_s23,
+#     F3_5_s23,
+#     F2_s13,
+#     F2_5_s13,
+#     F3_s13,
+#     F3_5_s13,
+# ):
+#     """
+#     Returns the *fully symmetrized* |M|^2 = expression + (1 <-> 2).
+#     """
+#     # The original piece:
+#     val = M_squared(
+#         s12,
+#         s13,
+#         s23,
+#         m_e,
+#         m_mu,
+#         f_a,
+#         m_a,
+#         Gamma_a,
+#         c_ee,
+#         ke_12,
+#         kE_12,
+#         e,
+#         F2_s23,
+#         F2_5_s23,
+#         F3_s23,
+#         F3_5_s23,
+#         F2_s13,
+#         F2_5_s13,
+#         F3_s13,
+#         F3_5_s13,
+#     )
+#     # The swapped piece (swap s12 <-> s13, also swap the form-factor inputs that
+#     # used to go with s13 vs. s12):
+#     val_swapped = M_squared(
+#         s13,
+#         s12,
+#         s23,
+#         m_e,
+#         m_mu,
+#         f_a,
+#         m_a,
+#         Gamma_a,
+#         c_ee,
+#         ke_12,
+#         kE_12,
+#         e,
+#         # notice we swap which F_*(sXX) we pass in
+#         F2_s23=F2_s23,
+#         F2_5_s23=F2_5_s23,
+#         F3_s23=F3_s23,
+#         F3_5_s23=F3_5_s23,
+#         F2_s13=F2_s12,
+#         F2_5_s13=F2_5_s12,
+#         F3_s13=F3_s12,
+#         F3_5_s13=F3_5_s12,
+#     )
+#     # sum them
+#     return val + val_swapped

@@ -1,2 +1,0 @@
-Total cross section of proton-proton collisions: 32.4175 mb
-Cross section corresponding to saved events: 0 mb

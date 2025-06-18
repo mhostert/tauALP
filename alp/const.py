@@ -47,6 +47,15 @@ invGeV_to_s = invGeV_to_cm / c_LIGHT
 cm2_to_attobarn = 1e42
 attobarn_to_cm2 = 1e-42
 
+cm2_to_mbarn = 1e27
+mbarn_to_cm2 = 1e-27
+
+cm2_to_picobarn = 1e36
+picobarn_to_cm2 = 1e-36
+
+cm2_to_barn = 1e24
+barn_to_cm2 = 1e-24
+
 invGeV2_to_attobarn = invGeV2_to_cm2 * cm2_to_attobarn
 
 # cosmo definitions
@@ -113,7 +122,13 @@ m_charged_B = 5.27958
 
 m_neutral_kaon = 0.497611
 m_charged_kaon = 0.4937
-m_charged_kaonstar = 0.892
+m_charged_kaon_star = 0.892
+
+m_charged_D = 1.86966
+m_neutral_D = 1.86484
+m_charged_Ds = 1.96835
+m_charged_Ds_star = 2.1122
+
 
 ################################################
 # QED

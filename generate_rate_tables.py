@@ -22,10 +22,10 @@ from tqdm.contrib.concurrent import process_map
 # LHC_files = "pythia8_cluster/pythia8_events_pT10GeV/soft_LHC_13.6TeV_pT13.6TeV"  # Pythia8 events
 
 NUMI_files = [
+    "pythia8_events/soft_120_GeV",
+    "pythia8_events/soft_120_GeV_3e3",
     "pythia8_events/soft_NuMI_120GeV_pt1TeV",
-    "pythia8_events/soft_NuMI_120GeV_pt1TeV_v2",
-    "pythia8_events/soft_NuMI_120GeV_pt1TeV_v3",
-    "pythia8_events/soft_SPS_120GeV_pt1TeV",
+    "pythia8_events/soft_NuMI_120GeV_pt1TeV_nopThatmin",
 ]
 SPS_files = [
     "pythia8_events/soft_SPS_400GeV_pt1TeV",
@@ -36,35 +36,31 @@ LHC_files = ["pythia8_events/soft_test_LHC13.6TeV_pt1TeV_weighted"]
 
 
 # Creating the experimental classes
-ICARUS = exp.Experiment(NUMI_files, exp_dic=EXPERIMENTS["ICARUS_exp"], duplicate_taus=1)
+ICARUS = exp.Experiment(NUMI_files, exp_dic=EXPERIMENTS["ICARUS"], duplicate_taus=1)
 MICROBOONE = exp.Experiment(
-    NUMI_files, exp_dic=EXPERIMENTS["MicroBooNE_exp"], duplicate_taus=1
+    NUMI_files, exp_dic=EXPERIMENTS["MicroBooNE"], duplicate_taus=1
 )
-NOVA = exp.Experiment(NUMI_files, exp_dic=EXPERIMENTS["NoVA_exp"], duplicate_taus=1)
+NOVA = exp.Experiment(NUMI_files, exp_dic=EXPERIMENTS["NoVA"], duplicate_taus=1)
 
-DUNE = exp.Experiment(NUMI_files, exp_dic=EXPERIMENTS["DUNE_exp"])
-TWOBYTWO = exp.Experiment(NUMI_files, exp_dic=EXPERIMENTS["TwoByTwo_exp"])
-TWOBYTWO_ABSORBER = exp.Experiment(
-    NUMI_files, exp_dic=EXPERIMENTS["TwoByTwo_absorber_exp"]
-)
+DUNE = exp.Experiment(NUMI_files, exp_dic=EXPERIMENTS["DUNE"])
+TWOBYTWO = exp.Experiment(NUMI_files, exp_dic=EXPERIMENTS["TwoByTwo"])
+TWOBYTWO_ABSORBER = exp.Experiment(NUMI_files, exp_dic=EXPERIMENTS["TwoByTwo_absorber"])
 
-ARGONEUT = exp.Experiment(NUMI_files, exp_dic=EXPERIMENTS["ArgoNeuT_exp"])
-ARGONEUT_absorber = exp.Experiment(
-    NUMI_files, exp_dic=EXPERIMENTS["ArgoNeuT_absorber_exp"]
-)
+ARGONEUT = exp.Experiment(NUMI_files, exp_dic=EXPERIMENTS["ArgoNeuT"])
+ARGONEUT_absorber = exp.Experiment(NUMI_files, exp_dic=EXPERIMENTS["ArgoNeuT_absorber"])
 
-CHARM = exp.Experiment(SPS_files, exp_dic=EXPERIMENTS["CHARM_exp"])
-BEBC = exp.Experiment(SPS_files, exp_dic=EXPERIMENTS["BEBC_exp"])
-# NA62 = exp.Experiment(SPS_files, exp_dic=EXPERIMENTS['NA62_exp'])
-SHIP = exp.Experiment(SPS_files, exp_dic=EXPERIMENTS["SHiP_exp"])
+CHARM = exp.Experiment(SPS_files, exp_dic=EXPERIMENTS["CHARM"])
+BEBC = exp.Experiment(SPS_files, exp_dic=EXPERIMENTS["BEBC"])
+# NA62 = exp.Experiment(SPS_files, exp_dic=EXPERIMENTS['NA62'])
+SHIP = exp.Experiment(SPS_files, exp_dic=EXPERIMENTS["SHiP"])
 
-PROTODUNE_NP02 = exp.Experiment(SPS_files, exp_dic=EXPERIMENTS["PROTO_DUNE_NP02_exp"])
-PROTODUNE_NP04 = exp.Experiment(SPS_files, exp_dic=EXPERIMENTS["PROTO_DUNE_NP04_exp"])
+PROTODUNE_NP02 = exp.Experiment(SPS_files, exp_dic=EXPERIMENTS["PROTO_DUNE_NP02"])
+PROTODUNE_NP04 = exp.Experiment(SPS_files, exp_dic=EXPERIMENTS["PROTO_DUNE_NP04"])
 
-FASER = exp.Experiment(LHC_files, exp_dic=EXPERIMENTS["FASER_exp"])
-FASER2 = exp.Experiment(LHC_files, exp_dic=EXPERIMENTS["FASER2_exp"])
+FASER = exp.Experiment(LHC_files, exp_dic=EXPERIMENTS["FASER"])
+FASER2 = exp.Experiment(LHC_files, exp_dic=EXPERIMENTS["FASER2"])
 
-NPOINTS = 21
+NPOINTS = 26
 
 
 def simulate(args):
@@ -75,12 +71,48 @@ def simulate(args):
 def run_simulations(exp_list, BP_NAME, **kwargs):
     print(f"Running simulations for {BP_NAME}...")
     args_list = [(exp_case, kwargs) for exp_case in exp_list]
-    process_map(simulate, args_list, max_workers=4)
+    process_map(simulate, args_list, max_workers=6)
 
 
 if __name__ == "__main__":
 
     mp.set_start_method("spawn")
+
+    """'
+        LFV ANARCHY   FA vs ma
+    """
+    BP_NAME = "anarchy_vMC"
+    lamb = 1
+    c_lepton = np.ones((3, 3))
+
+    kwargs = {
+        "inv_fa_range": [1e-10, 1e-3],
+        "name": BP_NAME,
+        "c_lepton": c_lepton,
+        "Npoints": NPOINTS,
+    }
+
+    exp_list = []
+    # for ncase in ["nlow", "nhigh"]:
+    #     for bcase in ["blow", "bhigh"]:
+    #         EXPERIMENTS["NoVA"]["name"] = f"NOVA_{ncase}_{bcase}"
+
+    #         NOVA_case = exp.Experiment(
+    #             f"tau_events/df_120GeV_1e5_{ncase}_{bcase}.parquet",
+    #             exp_dic=EXPERIMENTS["NoVA"],
+    #         )
+
+    #         exp_list.append(NOVA_case)
+
+    # Run with Pythia8 events:
+    EXPERIMENTS["NoVA"]["name"] = f"NOVA_pythia8"
+    NOVA_case = exp.Experiment(
+        NUMI_files,
+        exp_dic=EXPERIMENTS["NoVA"],
+    )
+    exp_list.append(NOVA_case)
+
+    run_simulations(exp_list, BP_NAME, **kwargs)
 
     # exp_list = [CHARM, BEBC, SHIP, FASER2, PROTODUNE_NP02, PROTODUNE_NP04, DUNE]
 
@@ -135,36 +167,36 @@ if __name__ == "__main__":
     # exp_list = [CHARM, BEBC, SHIP, FASER2, PROTODUNE_NP02, PROTODUNE_NP04, DUNE]
     # run_simulations(exp_list, BP_NAME, **kwargs)
 
-    """'
-        LFV ANARCHY   FA vs ma
-    """
-    BP_NAME = "anarchy_vMC"
-    lamb = 1
-    c_lepton = np.ones((3, 3))
+    # """'
+    #     LFV ANARCHY   FA vs ma
+    # """
+    # BP_NAME = "anarchy_vMC"
+    # lamb = 1
+    # c_lepton = np.ones((3, 3))
 
-    kwargs = {
-        "inv_fa_range": [1e-10, 1e-3],
-        "name": BP_NAME,
-        "c_lepton": c_lepton,
-        "Npoints": NPOINTS,
-    }
+    # kwargs = {
+    #     "inv_fa_range": [1e-10, 1e-3],
+    #     "name": BP_NAME,
+    #     "c_lepton": c_lepton,
+    #     "Npoints": NPOINTS,
+    # }
 
-    exp_list = [
-        ICARUS,
-        MICROBOONE,
-        NOVA,
-        CHARM,
-        BEBC,
-        SHIP,
-        FASER,
-        FASER2,
-        PROTODUNE_NP02,
-        PROTODUNE_NP04,
-        DUNE,
-        # TWOBYTWO,
-        # TWOBYTWO_ABSORBER,
-    ]
-    run_simulations(exp_list, BP_NAME, **kwargs)
+    # exp_list = [
+    #     ICARUS,
+    #     MICROBOONE,
+    #     NOVA,
+    #     CHARM,
+    #     BEBC,
+    #     SHIP,
+    #     FASER,
+    #     FASER2,
+    #     PROTODUNE_NP02,
+    #     PROTODUNE_NP04,
+    #     DUNE,
+    #     # TWOBYTWO,
+    #     # TWOBYTWO_ABSORBER,
+    # ]
+    # run_simulations(exp_list, BP_NAME, **kwargs)
 
     # """'
     #     LFV HIEREACHY  FA vs ma

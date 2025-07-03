@@ -40,28 +40,28 @@ rc("text", usetex=True)
 rc("font", **{"family": "serif", "serif": ["Computer Modern Roman"]})
 matplotlib.rcParams["hatch.linewidth"] = 0.3
 
-# CB_color_cycle = [
-#     "#377eb8",
-#     "#f781bf",
-#     "#4daf4a",
-#     "#999999",
-#     "#ff7f00",
-#     "#a65628",
-#     "#984ea3",
-#     "#e41a1c",
-#     "#dede00",
-# ]
 CB_color_cycle = [
     "#377eb8",
-    "#ff7f00",
-    "#4daf4a",
     "#f781bf",
+    "#4daf4a",
+    "#999999",
+    "#ff7f00",
     "#a65628",
     "#984ea3",
-    "#999999",
     "#e41a1c",
     "#dede00",
 ]
+# CB_color_cycle = [
+#     "#377eb8",
+#     "#ff7f00",
+#     "#4daf4a",
+#     "#f781bf",
+#     "#a65628",
+#     "#984ea3",
+#     "#999999",
+#     "#e41a1c",
+#     "#dede00",
+# ]
 plt.rcParams["axes.prop_cycle"] = plt.cycler(color=CB_color_cycle)
 rcParams.update(rcparams)
 
@@ -1795,26 +1795,26 @@ def plot_other_limits(
         zorder=2,
     )
     if annotate:
-        # ax.annotate(
-        #     r"Supernova $g_{\mu \mu}$",
-        #     xy=(1.05e-2, 2.4e-8 / c_lepton[1, 1]),
-        #     xycoords="data",
-        #     fontsize=9,
-        #     horizontalalignment="left",
-        #     verticalalignment="center",
-        #     zorder=3,
-        #     color=edgecolor,
-        # )
-        # ax.annotate(
-        #     r"Supernova $g_{ee}$",
-        #     xy=(1.05e-2, 8e-8 / c_lepton[0, 0]),
-        #     xycoords="data",
-        #     fontsize=9,
-        #     horizontalalignment="left",
-        #     verticalalignment="center",
-        #     zorder=3,
-        #     color=edgecolor,
-        # )
+        ax.annotate(
+            r"Supernova $g_{\mu \mu}$",
+            xy=(1.05e-2, 2.4e-8 / c_lepton[1, 1]),
+            xycoords="data",
+            fontsize=9,
+            horizontalalignment="left",
+            verticalalignment="center",
+            zorder=3,
+            color=edgecolor,
+        )
+        ax.annotate(
+            r"Supernova $g_{ee}$",
+            xy=(1.05e-2, 8e-8 / c_lepton[0, 0]),
+            xycoords="data",
+            fontsize=9,
+            horizontalalignment="left",
+            verticalalignment="center",
+            zorder=3,
+            color=edgecolor,
+        )
         ax.annotate(
             r"Supernova $g_{e\mu}$",
             xy=(1.05e-2, 0.6e-8 / c_lepton[0, 1]),

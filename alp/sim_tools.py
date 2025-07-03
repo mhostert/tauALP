@@ -33,7 +33,7 @@ def make_rate_table(
 
     # Make sure the initial experiment is set up with the right kind of ALP
     # This makes sure we can use reweighting to get the rates
-    EXP.alp = alp_1 = models.ALP(0.5, 1e7, c_lepton=c_lepton)
+    EXP.alp = models.ALP(0.5, 1e7, c_lepton=c_lepton)
 
     z = []
     total_iterations = len(m_alps) * len(inv_fas)
@@ -59,7 +59,7 @@ def make_rate_table(
     Z = np.reshape(z, MA.shape).T
 
     if save:
-        np.save(f"data/{EXP.name}_rates{name}.npy", [MA, INV_FA, Z])
+        np.save(f"data/{EXP.name}_rates.npy", [MA, INV_FA, Z])
     return MA, INV_FA, Z
 
 

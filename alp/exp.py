@@ -319,31 +319,18 @@ class Experiment:
         m2 = models.LEPTON_MASSES[models.LEPTON_INDEX[decay_channel[1]]]
 
         # Sampling ALP energy from different production channels
-        ECM_1 = (
-            np.ones(self.nevents)
-            * (alp.m_a**2 + m1**2 - m2**2)
-            / 2
-            / np.sqrt(2 * alp.m_a)
-        )
-        ECM_2 = (
-            np.ones(self.nevents)
-            * (alp.m_a**2 - m1**2 + m2**2)
-            / 2
-            / np.sqrt(2 * alp.m_a)
-        )
+        ECM_1 = np.ones(self.nevents) * (alp.m_a**2 + m1**2 - m2**2) / (2 * alp.m_a)
+        ECM_2 = np.ones(self.nevents) * (alp.m_a**2 - m1**2 + m2**2) / (2 * alp.m_a)
 
         pCM_1 = np.zeros_like(ECM_1)
         pCM_1[ECM_1 > m1] = np.sqrt(ECM_1[ECM_1 > m1] ** 2 - m1**2)
 
-        pCM_2 = np.zeros_like(ECM_2)
-        pCM_2[ECM_2 > m2] = np.sqrt(ECM_2[ECM_2 > m2] ** 2 - m2**2)
-
         # Build ALP 4 momenta
         p4_CM_1 = Cfv.build_fourvec(ECM_1, pCM_1, ctheta_1, phi_1)
         p4_CM_2 = Cfv.build_fourvec(ECM_2, -pCM_1, ctheta_1, phi_1)
-
         ctheta_alp_LAB = Cfv.get_cosTheta(self.p4_alp)
         phi_alp_LAB = np.arctan2(self.p4_alp[:, 2], self.p4_alp[:, 1])
+
         beta = -np.sqrt(1 - (alp.m_a / self.p4_alp[:, 0]) ** 2)
         beta[beta < -1] = -1
         p4_1 = Cfv.Tinv(
@@ -408,7 +395,7 @@ class Experiment:
 
         self.weights = self.tau_weights * self.tau_BRs[production_channel]
 
-        return self.p4_1, self.p4_2, self.weights
+        return self.p4_alp, self.p4_1, self.p4_2, self.weights
 
     def get_alp_events(self, alp=None):
         """
@@ -424,6 +411,7 @@ class Experiment:
             "tau>nu+nu+e+a",
             "tau>nu+nu+mu+a",
         ]
+        p_alp_list = []
         p1_list = []
         p2_list = []
         weights_list = []
@@ -436,9 +424,10 @@ class Experiment:
                     alp.tau_BR(prod_channel) > 0
                     and vars(alp)[f"BR_a_to_{decay_channel}"] > 0
                 ):
-                    p1, p2, weights = self.generate_alp_events(
+                    p_alp, p1, p2, weights = self.generate_alp_events(
                         alp, prod_channel, decay_channel
                     )
+                    p_alp_list.append(p_alp)
                     p1_list.append(p1)
                     p2_list.append(p2)
                     weights_list.append(weights)
@@ -450,6 +439,7 @@ class Experiment:
                     if p1_list and prod_channel == "tau>mu+a":
                         break
 
+        self.p4_alp = np.concatenate(p_alp_list, axis=0)
         if p1_list:
             self.p4_daughter1 = np.concatenate(p1_list, axis=0)
             self.p4_daughter2 = np.concatenate(p2_list, axis=0)
@@ -460,9 +450,9 @@ class Experiment:
             self.p4_daughter2 = np.array([])
             self.weights = np.array([])
 
-        del p1, p2, weights, p1_list, p2_list, weights_list
+        del p1, p2, weights, p1_list, p2_list, weights_list, self.p4_1, self.p4_2
 
-        self.p4_alp = self.p4_daughter1 + self.p4_daughter2
+        # self.p4_alp = self.p4_daughter1 + self.p4_daughter2
 
         # 3-momentum absolute value
         # self.p_alp = np.zeros_like(self.p4_alp[:, 0])

@@ -59,7 +59,7 @@ def make_rate_table(
     Z = np.reshape(z, MA.shape).T
 
     if save:
-        np.save(f"data/{EXP.name}_rates.npy", [MA, INV_FA, Z])
+        np.save(f"data/{EXP.name}_rates_{name}.npy", [MA, INV_FA, Z])
     return MA, INV_FA, Z
 
 

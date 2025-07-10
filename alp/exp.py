@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 import glob
+from concurrent.futures import ThreadPoolExecutor
 
 from DarkNews import Cfourvec as Cfv
 
@@ -53,7 +54,6 @@ def read_pythia_file_with_attrs(file_path, n_header_lines=8):
 
 def load_events(
     file_names,
-    as_dataframe=False,
     apply_tauBR_weights=False,
     apply_xsec_weights=True,
 ):
@@ -76,9 +76,9 @@ def load_events(
             files += glob.glob(f"{file_name}_*.txt")
 
     # Check if the file paths exist
-    for file_path in files:
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"File not found: {file_path}")
+    files = [f for f in files if os.path.exists(f)]
+    if not files:
+        raise FileNotFoundError(f"No valid files matching {file_names}_*.txt")
     nfiles = len(files)
     if nfiles == 0:
         raise FileNotFoundError(f"No files found matching pattern: {file_names}_*.txt")
@@ -97,13 +97,14 @@ def load_events(
     total_hard = 0
 
     # Initialize an empty DataFrame
-    df = pd.DataFrame()
     particle_count = 0
     event_count = 0
     # Iterate over each file path, read the CSV file, and concatenate it to the existing DataFrame
     tot_tau_xsec = 0.0
     tot_xsec_soft = 0.0
     tot_xsec_hard = 0.0
+
+    dfs = []  # collect dataframes here
 
     for file_path in files:
 
@@ -156,11 +157,12 @@ def load_events(
                 df_new.loc[mask, "weights"] *= br
 
         # Concatenate
-        df = pd.concat([df, df_new], ignore_index=True)
-        df.attrs.update(df_new.attrs)
-        df.attrs["tau_xsec_mb"] = tot_tau_xsec
-        df.attrs["total_xsec_mb"] = tot_xsec_soft + tot_xsec_hard
+        dfs.append(df_new)
 
+    df = pd.concat(dfs, ignore_index=True)
+    df.attrs.update(df_new.attrs)
+    df.attrs["tau_xsec_mb"] = tot_tau_xsec
+    df.attrs["total_xsec_mb"] = tot_xsec_soft + tot_xsec_hard
     if apply_xsec_weights:
         df["weights"] = df["weights"] / (
             total_hard * tot_xsec_hard + total_soft * tot_xsec_soft
@@ -215,7 +217,13 @@ class Experiment:
             alp (object): ALP model instance.
         """
 
-        df_taus = load_events(file_paths)
+        if isinstance(file_paths, list) or (
+            isinstance(file_paths, str) and ".pd" not in file_paths
+        ):
+            df_taus = load_events(file_paths)
+        elif isinstance(file_paths, str) and ".pd" in file_paths:
+            df_taus = pd.read_parquet(file_paths)
+
         if duplicate_taus is not None:
             # if duplicate_taus >= 1:
             #     df_taus = np.repeat(df_taus, duplicate_taus, axis=0)
@@ -301,26 +309,32 @@ class Experiment:
         ).T
         return p4_parent
 
-    def sample_alp_energy_spectrum(self, production_channel, alp):
+    def sample_alp_energy_spectrum(self, production_channel, alp, nevents=None):
         # ECM_alp = Cfv.random_generator(
         #     self.nevents, alp.Ea_min[production_channel], alp.Ea_max[production_channel]
         # )
+        if nevents is None:
+            nevents = self.nevents
         ECM_alp = np.random.uniform(
-            alp.Ea_min[production_channel], alp.Ea_max[production_channel], self.nevents
+            alp.Ea_min[production_channel], alp.Ea_max[production_channel], nevents
         )
         return ECM_alp
 
-    def sample_alp_daughter_4momenta(self, decay_channel, alp):
+    def sample_alp_daughter_4momenta(self, decay_channel, alp, nevents=None):
+
+        if nevents is None:
+            nevents = self.nevents
+
         # Flat dOmega = dcos(theta) * dphi
-        phi_1 = np.random.uniform(0, 2 * np.pi, self.nevents)
-        ctheta_1 = np.random.uniform(-1, 1, self.nevents)
+        phi_1 = np.random.uniform(0, 2 * np.pi, nevents)
+        ctheta_1 = np.random.uniform(-1, 1, nevents)
 
         m1 = models.LEPTON_MASSES[models.LEPTON_INDEX[decay_channel[0]]]
         m2 = models.LEPTON_MASSES[models.LEPTON_INDEX[decay_channel[1]]]
 
         # Sampling ALP energy from different production channels
-        ECM_1 = np.ones(self.nevents) * (alp.m_a**2 + m1**2 - m2**2) / (2 * alp.m_a)
-        ECM_2 = np.ones(self.nevents) * (alp.m_a**2 - m1**2 + m2**2) / (2 * alp.m_a)
+        ECM_1 = np.ones(nevents) * (alp.m_a**2 + m1**2 - m2**2) / (2 * alp.m_a)
+        ECM_2 = np.ones(nevents) * (alp.m_a**2 - m1**2 + m2**2) / (2 * alp.m_a)
 
         pCM_1 = np.zeros_like(ECM_1)
         pCM_1[ECM_1 > m1] = np.sqrt(ECM_1[ECM_1 > m1] ** 2 - m1**2)
@@ -348,28 +362,35 @@ class Experiment:
 
         return p4_1, p4_2
 
-    def generate_alp_events(self, alp, production_channel, decay_channel):
+    def generate_alp_events(
+        self, alp, production_channel, decay_channel, mask_taus=None
+    ):
         """
         Generate ALP events for a given tau decay channel
         """
 
+        n_taus = mask_taus.sum() if mask_taus is not None else self.nevents
+
         # Flat dOmega = dcos(theta) * dphi
-        phi_alp = np.random.uniform(0, 2 * np.pi, self.nevents)
-        ctheta_alp = np.random.uniform(-1, 1, self.nevents)
+        phi_alp = np.random.uniform(0, 2 * np.pi, n_taus)
+        ctheta_alp = np.random.uniform(-1, 1, n_taus)
 
         # Sampling ALP energy from different production channels
-        ECM_alp = self.sample_alp_energy_spectrum(production_channel, alp)
+        ECM_alp = self.sample_alp_energy_spectrum(
+            production_channel, alp, nevents=n_taus
+        )
         pCM_alp = np.zeros_like(ECM_alp)
         pCM_alp[ECM_alp > alp.m_a] = np.sqrt(
             ECM_alp[ECM_alp > alp.m_a] ** 2 - alp.m_a**2
         )
 
         # Build ALP 4 momenta
+        p4_tau = self.p4_taus[mask_taus]
         p4_alp_CM = Cfv.build_fourvec(ECM_alp, pCM_alp, ctheta_alp, phi_alp)
-        p_taus = Cfv.get_3vec_norm(self.p4_taus)
-        ctheta_tau_LAB = Cfv.get_cosTheta(self.p4_taus)
-        phitau_LAB = np.arctan2(self.p4_taus[:, 2], self.p4_taus[:, 1])
-        beta = -p_taus / self.p4_taus[:, 0]
+        p_taus = Cfv.get_3vec_norm(p4_tau)
+        ctheta_tau_LAB = Cfv.get_cosTheta(p4_tau)
+        phitau_LAB = np.arctan2(p4_tau[:, 2], p4_tau[:, 1])
+        beta = -p_taus / p4_tau[:, 0]
         beta[beta < -1] = -1
 
         self.p4_alp = Cfv.Tinv(
@@ -380,7 +401,7 @@ class Experiment:
         )
 
         self.p4_1, self.p4_2 = self.sample_alp_daughter_4momenta(
-            decay_channel=decay_channel, alp=alp
+            decay_channel=decay_channel, alp=alp, nevents=n_taus
         )
 
         # Total tau branching ratio
@@ -393,7 +414,7 @@ class Experiment:
                 alp.tau_diff_BR(ECM_alp, production_channel) / self.nevents
             ) * (alp.Ea_max[production_channel] - alp.Ea_min[production_channel])
 
-        self.weights = self.tau_weights * self.tau_BRs[production_channel]
+        self.weights = self.tau_weights[mask_taus] * self.tau_BRs[production_channel]
 
         return self.p4_alp, self.p4_1, self.p4_2, self.weights
 
@@ -403,54 +424,87 @@ class Experiment:
         """
         if alp is None:
             alp = self.alp
-        production_channels = [
-            "tau>e+a",
-            "tau>mu+a",
-            "tau>nu+pi+a",
-            "tau>nu+rho+a",
-            "tau>nu+nu+e+a",
-            "tau>nu+nu+mu+a",
-        ]
-        p_alp_list = []
-        p1_list = []
-        p2_list = []
-        weights_list = []
-        # channel_list = []
 
-        for prod_channel in production_channels:
-            for decay_channel in self.final_states:
+        # Preload branching ratios
+        br_decay_dict = {
+            decay: vars(alp)[f"BR_a_to_{decay}"] for decay in self.final_states
+        }
 
-                if (
-                    alp.tau_BR(prod_channel) > 0
-                    and vars(alp)[f"BR_a_to_{decay_channel}"] > 0
-                ):
-                    p_alp, p1, p2, weights = self.generate_alp_events(
-                        alp, prod_channel, decay_channel
-                    )
-                    p_alp_list.append(p_alp)
-                    p1_list.append(p1)
-                    p2_list.append(p2)
-                    weights_list.append(weights)
-                    # channel_list.append(
-                    #     np.repeat(prod_channel + "_a>" + decay_channel, len(weights))
-                    # )
+        # Compute channel weights
+        dic_channel_weights = {
+            (prod, decay): alp.tau_BR(prod) * br_decay_dict[decay]
+            for prod in [
+                "tau>e+a",
+                "tau>mu+a",
+                "tau>nu+pi+a",
+                "tau>nu+rho+a",
+                "tau>nu+nu+e+a",
+                "tau>nu+nu+mu+a",
+            ]
+            for decay in self.final_states
+        }
 
-                    # Break if LFV channels available and non-zero
-                    if p1_list and prod_channel == "tau>mu+a":
-                        break
+        # Normalize and filter
+        total = sum(dic_channel_weights.values())
+        dic_channel_weights = {
+            k: v / total for k, v in dic_channel_weights.items() if (v / total) > 1e-3
+        }
 
-        self.p4_alp = np.concatenate(p_alp_list, axis=0)
-        if p1_list:
-            self.p4_daughter1 = np.concatenate(p1_list, axis=0)
-            self.p4_daughter2 = np.concatenate(p2_list, axis=0)
-            self.weights = np.concatenate(weights_list)
-            # self.channel_list = np.concatenate(channel_list)
-        else:
-            self.p4_daughter1 = np.array([])
-            self.p4_daughter2 = np.array([])
-            self.weights = np.array([])
+        # Assign events
+        choices_of_taus = np.arange(self.nevents)
+        np.random.shuffle(choices_of_taus)
+        event_splits = {}
+        start_idx = 0
 
-        del p1, p2, weights, p1_list, p2_list, weights_list, self.p4_1, self.p4_2
+        for (prod_channel, decay_channel), weight in dic_channel_weights.items():
+            n = int(weight * self.nevents)
+            selected = choices_of_taus[start_idx : start_idx + n]
+            start_idx += n
+            event_splits[(prod_channel, decay_channel)] = selected
+
+        # First, compute number of events per channel
+        event_splits = {}
+        total_generated = 0
+        choices_of_taus = np.arange(self.nevents)
+        np.random.shuffle(choices_of_taus)
+        start_idx = 0
+
+        for (prod_channel, decay_channel), weight in dic_channel_weights.items():
+            n = int(weight * self.nevents)
+            selected = choices_of_taus[start_idx : start_idx + n]
+            start_idx += n
+            event_splits[(prod_channel, decay_channel)] = selected
+            total_generated += n
+
+        # Preallocate all outputs
+        p4_alp = np.empty((total_generated, 4))
+        p4_d1 = np.empty((total_generated, 4))
+        p4_d2 = np.empty((total_generated, 4))
+        weights = np.empty(total_generated)
+
+        # Fill in arrays directly
+        insert_idx = 0
+        for (prod_channel, decay_channel), indices in event_splits.items():
+            mask = np.zeros(self.nevents, dtype=bool)
+            mask[indices] = True
+
+            p_alp, p1, p2, w = self.generate_alp_events(
+                alp, prod_channel, decay_channel, mask_taus=mask
+            )
+
+            n_events = len(w)
+            p4_alp[insert_idx : insert_idx + n_events] = p_alp
+            p4_d1[insert_idx : insert_idx + n_events] = p1
+            p4_d2[insert_idx : insert_idx + n_events] = p2
+            weights[insert_idx : insert_idx + n_events] = w
+            insert_idx += n_events
+
+        # Final assignment
+        self.p4_alp = p4_alp
+        self.p4_daughter1 = p4_d1
+        self.p4_daughter2 = p4_d2
+        self.weights = weights
+        del p1, p2, weights, self.p4_1, self.p4_2
 
         # self.p4_alp = self.p4_daughter1 + self.p4_daughter2
 

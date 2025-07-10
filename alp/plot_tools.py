@@ -51,18 +51,18 @@ CB_color_cycle = [
     "#e41a1c",
     "#dede00",
 ]
-# CB_color_cycle = [
-#     "#377eb8",
-#     "#ff7f00",
-#     "#4daf4a",
-#     "#f781bf",
-#     "#a65628",
-#     "#984ea3",
-#     "#999999",
-#     "#e41a1c",
-#     "#dede00",
-# ]
-plt.rcParams["axes.prop_cycle"] = plt.cycler(color=CB_color_cycle)
+CB_color_cycle_2 = [
+    "#377eb8",
+    "#ff7f00",
+    "#4daf4a",
+    "#f781bf",
+    "#a65628",
+    "#984ea3",
+    "#999999",
+    "#e41a1c",
+    "#dede00",
+]
+plt.rcParams["axes.prop_cycle"] = plt.cycler(color=CB_color_cycle_2)
 rcParams.update(rcparams)
 
 # settings for Mini Figs
@@ -511,13 +511,13 @@ def main_plot_LFV(
     name = BP_NAME
 
     Nsig = 2.3
-    X, Y, Z = np.load(f"data/CHARM_rates{name}.npy", allow_pickle=True)
+    X, Y, Z = np.load(f"data/CHARM_rates_{name}.npy", allow_pickle=True)
     c = ax.contourf(
         X,
         Y**fa_power,
         Z,
         levels=[Nsig, 1e100],
-        colors=[lighten_color(CB_color_cycle[0], 0.5)],
+        colors=[lighten_color(CB_color_cycle_2[0], 0.5)],
         alpha=1,
         zorder=-0.2,
     )
@@ -526,7 +526,7 @@ def main_plot_LFV(
         Y**fa_power,
         Z,
         levels=[Nsig],
-        colors=CB_color_cycle[0],
+        colors=CB_color_cycle_2[0],
         linestyles="-",
         linewidths=[1],
         alpha=1,
@@ -535,13 +535,13 @@ def main_plot_LFV(
     labels.append(c.legend_elements()[0][0])
     labelnames.append("CHARM")
 
-    X, Y, Z = np.load(f"data/BEBC_rates{name}.npy", allow_pickle=True)
+    X, Y, Z = np.load(f"data/BEBC_rates_{name}.npy", allow_pickle=True)
     c = ax.contourf(
         X,
         Y**fa_power,
         Z,
         levels=[Nsig, 1e100],
-        colors=[lighten_color(CB_color_cycle[1], 0.5)],
+        colors=[lighten_color(CB_color_cycle_2[1], 0.5)],
         alpha=1,
         zorder=-0.1,
     )
@@ -550,7 +550,7 @@ def main_plot_LFV(
         Y**fa_power,
         Z,
         levels=[Nsig],
-        colors=CB_color_cycle[1],
+        colors=CB_color_cycle_2[1],
         linestyles="-",
         linewidths=[1],
         alpha=1,
@@ -559,14 +559,14 @@ def main_plot_LFV(
     labels.append(c.legend_elements()[0][0])
     labelnames.append("BEBC")
 
-    X, Y, Z = np.load(f"data/NoVA_rates{name}.npy", allow_pickle=True)
+    X, Y, Z = np.load(f"data/NoVA_rates_{name}.npy", allow_pickle=True)
     # c = ax.contourf(X, Y**fa_power, Z, levels=[Nsig, 1e100], colors=[lighten_color('darkorange', 0.5)], alpha=1, zorder=1.3)
     c = ax.contour(
         X,
         Y**fa_power,
         Z,
         levels=[Nsig],
-        colors=CB_color_cycle[3],
+        colors=CB_color_cycle_2[3],
         linestyles=[(1, (2, 0))],
         linewidths=[1.75],
         alpha=1,
@@ -575,14 +575,14 @@ def main_plot_LFV(
     labels.append(c.legend_elements()[0][0])
     labelnames.append("NOvA")
 
-    X, Y, Z = np.load(f"data/MicroBooNE_rates{name}.npy", allow_pickle=True)
+    X, Y, Z = np.load(f"data/MicroBooNE_rates_{name}.npy", allow_pickle=True)
     # c = ax.contourf(X, Y**fa_power, Z, levels=[Nsig, 1e100], colors=[lighten_color('black', 0.5)], alpha=1, zorder=1.2)
     c = ax.contour(
         X,
         Y**fa_power,
         Z,
         levels=[Nsig],
-        colors=CB_color_cycle[3],
+        colors=CB_color_cycle_2[3],
         linestyles=[
             (
                 1,
@@ -599,14 +599,14 @@ def main_plot_LFV(
     labels.append(c.legend_elements()[0][0])
     labelnames.append("$\mu$BooNE (NuMI)")
 
-    X, Y, Z = np.load(f"data/ICARUS_rates{name}.npy", allow_pickle=True)
+    X, Y, Z = np.load(f"data/ICARUS_rates_{name}.npy", allow_pickle=True)
     # c = ax.contourf(X, Y**fa_power, Z, levels=[Nsig, 1e100], colors=[lighten_color('black', 0.5)], alpha=1, zorder=1.1)
     c = ax.contour(
         X,
         Y**fa_power,
         Z,
         levels=[Nsig],
-        colors=CB_color_cycle[3],
+        colors=CB_color_cycle_2[3],
         linestyles=[(1, (4, 1))],
         linewidths=[1.75],
         alpha=1,
@@ -615,15 +615,15 @@ def main_plot_LFV(
     labels.append(c.legend_elements()[0][0])
     labelnames.append("ICARUS (NuMI)")
 
-    X1, Y1, Z1 = np.load(f"data/ProtoDUNE-NP02_rates{name}.npy", allow_pickle=True)
-    _, _, Z2 = np.load(f"data/ProtoDUNE-NP02_rates{name}.npy", allow_pickle=True)
+    X1, Y1, Z1 = np.load(f"data/ProtoDUNE-NP02_rates_{name}.npy", allow_pickle=True)
+    _, _, Z2 = np.load(f"data/ProtoDUNE-NP02_rates_{name}.npy", allow_pickle=True)
     X, Y, Z = X1, Y1, Z1 + Z2
     c = ax.contour(
         X,
         Y**fa_power,
         Z,
         levels=[Nsig],
-        colors=CB_color_cycle[0],
+        colors=CB_color_cycle_2[0],
         linestyles=[(1, (3, 2))],
         linewidths=[1.75],
         alpha=1,
@@ -633,7 +633,7 @@ def main_plot_LFV(
     labelnames.append(r"Proto-DUNE")
 
     if plot_DUNEs:
-        X, Y, Z = np.load(f"data/DUNE-ND_rates{name}.npy", allow_pickle=True)
+        X, Y, Z = np.load(f"data/DUNE-ND_rates_{name}.npy", allow_pickle=True)
         c = ax.contour(
             X,
             Y**fa_power,
@@ -648,8 +648,8 @@ def main_plot_LFV(
         labels.append(c.legend_elements()[0][0])
         labelnames.append(r"DUNE ND")
 
-        # X1,Y1,Z1 = np.load(f'data/2x2 protoDUNE-ND_rates{name}.npy', allow_pickle=True)
-        # _,_,Z2 = np.load(f'data/2x2 protoDUNE-ND absorber_rates{name}.npy', allow_pickle=True)
+        # X1,Y1,Z1 = np.load(f'data/2x2 protoDUNE-ND_rates_{name}.npy', allow_pickle=True)
+        # _,_,Z2 = np.load(f'data/2x2 protoDUNE-ND absorber_rates_{name}.npy', allow_pickle=True)
         # X,Y,Z = X1, Y1, Z1+Z2
         # if smear:
         #     Z = scipy.ndimage.filters.gaussian_filter(Z, smear_stddev, mode="nearest", order=0, cval=0)
@@ -658,8 +658,8 @@ def main_plot_LFV(
         # labels.append(c.legend_elements()[0][0])
         # labelnames.append(r'DUNE 2x2')
 
-    # X1,Y1,Z1 = np.load(f'data/ArgoNeuT_rates{name}.npy', allow_pickle=True)
-    # _,_,Z2 = np.load(f'data/ArgoNeuT_absorber_rates{name}.npy', allow_pickle=True)
+    # X1,Y1,Z1 = np.load(f'data/ArgoNeuT_rates_{name}.npy', allow_pickle=True)
+    # _,_,Z2 = np.load(f'data/ArgoNeuT_absorber_rates_{name}.npy', allow_pickle=True)
     # X,Y,Z = X1, Y1, Z1+Z2
     # if smear:
     #     Z = scipy.ndimage.filters.gaussian_filter(Z, smear_stddev, mode="nearest", order=0, cval=0)
@@ -668,7 +668,7 @@ def main_plot_LFV(
     # labels.append(c.legend_elements()[0][0])
     # labelnames.append(r'ArgoNeuT (ours)')
 
-    X, Y, Z = np.load(f"data/FASER_rates{name}.npy", allow_pickle=True)
+    X, Y, Z = np.load(f"data/FASER_rates_{name}.npy", allow_pickle=True)
     # c = ax.contourf(X, Y**fa_power, Z, levels=[Nsig, 1e100], colors=[lighten_color='black', 0.95)], alpha=1, zorder=1.91)
     c = ax.contour(
         X,
@@ -684,7 +684,7 @@ def main_plot_LFV(
     labels.append(c.legend_elements()[0][0])
     labelnames.append("FASER")
 
-    X, Y, Z = np.load(f"data/FASER2_rates{name}.npy", allow_pickle=True)
+    X, Y, Z = np.load(f"data/FASER2_rates_{name}.npy", allow_pickle=True)
     c = ax.contour(
         X,
         Y**fa_power,
@@ -699,7 +699,7 @@ def main_plot_LFV(
     labels.append(c.legend_elements()[0][0])
     labelnames.append(r"FASER-2")
 
-    X, Y, Z = np.load(f"data/SHiP_rates{name}.npy", allow_pickle=True)
+    X, Y, Z = np.load(f"data/SHiP_rates_{name}.npy", allow_pickle=True)
     c = ax.contour(
         X,
         Y**fa_power,
@@ -838,13 +838,13 @@ def main_plot_LFC(
     name = BP_NAME
 
     Nsig = 2.3
-    X, Y, Z = np.load(f"data/CHARM_rates{name}.npy", allow_pickle=True)
+    X, Y, Z = np.load(f"data/CHARM_rates_{name}.npy", allow_pickle=True)
     c = ax.contourf(
         X,
         Y**fa_power,
         Z,
         levels=[Nsig, 1e100],
-        colors=[lighten_color(CB_color_cycle[0], 0.5)],
+        colors=[lighten_color(CB_color_cycle_2[0], 0.5)],
         alpha=1,
         zorder=1.2,
     )
@@ -853,7 +853,7 @@ def main_plot_LFC(
         Y**fa_power,
         Z,
         levels=[Nsig],
-        colors=CB_color_cycle[0],
+        colors=CB_color_cycle_2[0],
         linestyles="-",
         linewidths=[1],
         alpha=1,
@@ -862,13 +862,13 @@ def main_plot_LFC(
     labels.append(c.legend_elements()[0][0])
     labelnames.append("CHARM")
 
-    X, Y, Z = np.load(f"data/BEBC_rates{name}.npy", allow_pickle=True)
+    X, Y, Z = np.load(f"data/BEBC_rates_{name}.npy", allow_pickle=True)
     c = ax.contourf(
         X,
         Y**fa_power,
         Z,
         levels=[Nsig, 1e100],
-        colors=[lighten_color(CB_color_cycle[1], 0.5)],
+        colors=[lighten_color(CB_color_cycle_2[1], 0.5)],
         alpha=1,
         zorder=1.2,
     )
@@ -877,7 +877,7 @@ def main_plot_LFC(
         Y**fa_power,
         Z,
         levels=[Nsig],
-        colors=CB_color_cycle[1],
+        colors=CB_color_cycle_2[1],
         linestyles="-",
         linewidths=[1],
         alpha=1,
@@ -886,15 +886,15 @@ def main_plot_LFC(
     labels.append(c.legend_elements()[0][0])
     labelnames.append("BEBC")
 
-    X1, Y1, Z1 = np.load(f"data/ProtoDUNE-NP02_rates{name}.npy", allow_pickle=True)
-    _, _, Z2 = np.load(f"data/ProtoDUNE-NP02_rates{name}.npy", allow_pickle=True)
+    X1, Y1, Z1 = np.load(f"data/ProtoDUNE-NP02_rates_{name}.npy", allow_pickle=True)
+    _, _, Z2 = np.load(f"data/ProtoDUNE-NP02_rates_{name}.npy", allow_pickle=True)
     X, Y, Z = X1, Y1, Z1 + Z2
     c = ax.contour(
         X,
         Y**fa_power,
         Z,
         levels=[Nsig],
-        colors=CB_color_cycle[0],
+        colors=CB_color_cycle_2[0],
         linestyles=[(1, (3, 2))],
         linewidths=[1.75],
         alpha=1,
@@ -904,7 +904,7 @@ def main_plot_LFC(
     labelnames.append(r"ProtoDUNE")
 
     if plot_DUNEs:
-        X, Y, Z = np.load(f"data/DUNE-ND_rates{name}.npy", allow_pickle=True)
+        X, Y, Z = np.load(f"data/DUNE-ND_rates_{name}.npy", allow_pickle=True)
         c = ax.contour(
             X,
             Y**fa_power,
@@ -919,14 +919,14 @@ def main_plot_LFC(
         labels.append(c.legend_elements()[0][0])
         labelnames.append(r"DUNE ND")
 
-        # X,Y,Z = np.load(f'data/2x2 protoDUNE-ND_rates{name}.npy', allow_pickle=True)
+        # X,Y,Z = np.load(f'data/2x2 protoDUNE-ND_rates_{name}.npy', allow_pickle=True)
         # if smear:
         #     Z = scipy.ndimage.filters.gaussian_filter(Z, smear_stddev, mode="nearest", order=0, cval=0)
         # c = ax.contour(X, Y**fa_power, Z, levels=[Nsig], colors='red', linestyles=[(1,(1,1))], linewidths=[1.75], alpha=1, zorder=2)
         # labels.append(c.legend_elements()[0][0])
         # labelnames.append(r'2x2 protoDUNE ND')
 
-    # X,Y,Z = np.load(f'data/FASER_rates{name}.npy', allow_pickle=True)
+    # X,Y,Z = np.load(f'data/FASER_rates_{name}.npy', allow_pickle=True)
     # if smear:
     #     Z = scipy.ndimage.filters.gaussian_filter(Z, 2*smear_stddev, mode="nearest", order=0, cval=0)
     # # c = ax.contourf(X, Y**fa_power, Z, levels=[Nsig, 1e100], colors=[lighten_color='black', 0.95)], alpha=1, zorder=1.91)
@@ -934,7 +934,7 @@ def main_plot_LFC(
     # labels.append(c.legend_elements()[0][0])
     # labelnames.append('FASER')
 
-    X, Y, Z = np.load(f"data/FASER2_rates{name}.npy", allow_pickle=True)
+    X, Y, Z = np.load(f"data/FASER2_rates_{name}.npy", allow_pickle=True)
     c = ax.contour(
         X,
         Y**fa_power,
@@ -949,7 +949,7 @@ def main_plot_LFC(
     labels.append(c.legend_elements()[0][0])
     labelnames.append(r"FASER-2")
 
-    X, Y, Z = np.load(f"data/SHiP_rates{name}.npy", allow_pickle=True)
+    X, Y, Z = np.load(f"data/SHiP_rates_{name}.npy", allow_pickle=True)
     c = ax.contour(
         X,
         Y**fa_power,
@@ -1364,49 +1364,49 @@ def plot_other_limits(
     #     zorder=0.2,
     # )
 
-    # # SN1987A
-    # x, y = np.genfromtxt("digitized/Supernova_mumu.dat", unpack=True)
-    # x *= 1e-9
-    # y = y[np.argsort(x)]
-    # x = x[np.argsort(x)]
-    # ax.fill_between(
-    #     x,
-    #     (1 / y) / c_lepton[1, 1],
-    #     y / y,
-    #     facecolor=lighten_color(inv_color, 0.5),
-    #     edgecolor="None",
-    #     linestyle="-",
-    #     zorder=0.1,
-    # )
-    # ax.plot(
-    #     x,
-    #     (1 / y) / c_lepton[1, 1],
-    #     color=lighten_color(edgecolor, 0.5),
-    #     linestyle=(1, (6, 2)),
-    #     lw=0.2,
-    #     zorder=0.2,
-    # )
+    # SN1987A
+    x, y = np.genfromtxt("digitized/Supernova_mumu.dat", unpack=True)
+    x *= 1e-9
+    y = y[np.argsort(x)]
+    x = x[np.argsort(x)]
+    ax.fill_between(
+        x,
+        (1 / y) / c_lepton[1, 1],
+        y / y,
+        facecolor=lighten_color(inv_color, 0.5),
+        edgecolor="None",
+        linestyle="-",
+        zorder=0.1,
+    )
+    ax.plot(
+        x,
+        (1 / y) / c_lepton[1, 1],
+        color=lighten_color(edgecolor, 0.5),
+        linestyle=(1, (6, 2)),
+        lw=0.2,
+        zorder=0.2,
+    )
 
-    # # SN1987A ee
-    # x, y = np.genfromtxt("digitized/Supernova_ee.dat", unpack=True)
-    # x *= 1e-9
-    # x, y = get_ordered_closed_region([x, y], logx=True, logy=True)
-    # ax.fill(
-    #     x,
-    #     (1 / y) / c_lepton[0, 0],
-    #     facecolor=lighten_color(inv_color, 0.5),
-    #     edgecolor="None",
-    #     linestyle="-",
-    #     zorder=0.1,
-    # )
-    # ax.plot(
-    #     x,
-    #     (1 / y) / c_lepton[0, 0],
-    #     color=lighten_color(edgecolor, 0.5),
-    #     linestyle=(1, (6, 2)),
-    #     lw=0.2,
-    #     zorder=0.2,
-    # )
+    # SN1987A ee
+    x, y = np.genfromtxt("digitized/Supernova_ee.dat", unpack=True)
+    x *= 1e-9
+    x, y = get_ordered_closed_region([x, y], logx=True, logy=True)
+    ax.fill(
+        x,
+        (1 / y) / c_lepton[0, 0],
+        facecolor=lighten_color(inv_color, 0.5),
+        edgecolor="None",
+        linestyle="-",
+        zorder=0.1,
+    )
+    ax.plot(
+        x,
+        (1 / y) / c_lepton[0, 0],
+        color=lighten_color(edgecolor, 0.5),
+        linestyle=(1, (6, 2)),
+        lw=0.2,
+        zorder=0.2,
+    )
 
     # SN1987A emu
     for v in ["v1", "v2"]:
@@ -2031,10 +2031,10 @@ def plot_other_limits_LFC(
                 linewidth=2 * linewidth,
             )
             ax.annotate(
-                r"NA64$\mu$",
-                xy=(0.07, 0.0035),
+                r"NA64$\mu$ (inv)",
+                xy=(0.04, 0.004),
                 fontsize=10,
-                rotation=-32,
+                rotation=-39,
                 color="grey",
                 ha="left",
                 va="bottom",
@@ -2092,13 +2092,13 @@ def plot_other_limits_LFC(
                 linewidth=2 * linewidth,
             )
             ax.annotate(
-                r"NA64e",
-                xy=(7e-3, 3.2e-1),
+                r"NA64e (vis)",
+                xy=(7e-3, 1.8e-1),
                 fontsize=10,
                 color="grey",
                 ha="left",
                 va="bottom",
-                rotation=-36,
+                rotation=-44,
             )
 
         ###########################################################
@@ -2124,6 +2124,15 @@ def plot_other_limits_LFC(
             zorder=1.01,
             linewidth=2 * linewidth,
             # label='E137 (Araki et al. 2021)',
+        )
+        ax.annotate(
+            r"Orsay",
+            xy=(1.6e-2, 1e-2),
+            fontsize=10,
+            color="grey",
+            ha="left",
+            va="bottom",
+            rotation=-36,
         )
         # ###########################################################
         # x, y = np.genfromtxt("digitized/NA64_pseudoscalar.dat", unpack=True)
@@ -2272,13 +2281,13 @@ def plot_other_limits_LFC(
                 linewidth=2 * linewidth,
             )
             ax.annotate(
-                r"NA64e",
-                xy=(7e-3, 3.2e-1),
+                r"NA64e (vis)",
+                xy=(7e-3, 1.6e-1),
                 fontsize=10,
                 color="grey",
                 ha="left",
                 va="bottom",
-                rotation=-36,
+                rotation=-44,
             )
 
             x, y = np.genfromtxt("digitized/E137_Araki_et_al_LFC.dat", unpack=True)
@@ -2387,7 +2396,7 @@ def plot_other_limits_LFC(
         # Add text labels to the gray regions
         if linewidth:
             ax.annotate(
-                r"SN cooling argument",
+                r"SN cooling ($g_{ee}$)",
                 xy=(2.4e-3, 1.2e-5 / 2),
                 fontsize=10,
                 color="grey",
@@ -2395,8 +2404,8 @@ def plot_other_limits_LFC(
                 va="bottom",
             )
             ax.annotate(
-                r"SN energy argument",
-                xy=(0.22, 1.2e-5 / 2),
+                r"Low-energy SN ($g_{ee}$)",
+                xy=(0.18, 1.2e-5 / 2),
                 fontsize=10,
                 color="grey",
                 ha="left",
@@ -2409,7 +2418,7 @@ def plot_other_limits_LFC(
                 color="grey",
                 ha="left",
                 va="bottom",
-                rotation=-22,
+                rotation=-26,
             )
 
             if c_lepton[0, 0] > 0 and c_lepton[1, 1] == 0:
@@ -2448,16 +2457,6 @@ def plot_other_limits_LFC(
                 color="grey",
                 ha="left",
                 va="bottom",
-            )
-            # ax.annotate(r'$\pi^+ \to e^+ \nu_e a$', xy=(0.07, norm*1.4e-6), fontsize=10, color='grey', ha='left', va='bottom')
-            ax.annotate(
-                r"Orsay",
-                xy=(1.6e-2, 1e-2),
-                fontsize=10,
-                color="grey",
-                ha="left",
-                va="bottom",
-                rotation=-30,
             )
             ax.annotate(
                 r"E141",
@@ -2514,7 +2513,7 @@ def plot_other_limits_LFC(
                 rotation=-50,
             )
             ax.annotate(
-                r"NA64$\mu$",
+                r"NA64$\mu$ (vis)",
                 xy=(2.2e-3, 0.7),
                 fontsize=10,
                 color="grey",
@@ -2522,7 +2521,7 @@ def plot_other_limits_LFC(
                 va="bottom",
             )
             ax.annotate(
-                r"NA64 (invisible)",
+                r"NA64e (inv)",
                 xy=(2.2e-3, 1.2),
                 fontsize=10,
                 color="grey",
@@ -2539,7 +2538,7 @@ def plot_other_limits_LFC(
                 rotation=0,
             )
             ax.annotate(
-                r"NA64 (visible)",
+                r"NA64e (vis)",
                 xy=(0.3, 6),
                 fontsize=10,
                 color="grey",
@@ -2572,7 +2571,7 @@ def make_Bvis_plot_LFV(
         Y,
         Z,
         levels=[Nsig, 1e100],
-        colors=[lighten_color(CB_color_cycle[0], 0.5)],
+        colors=[lighten_color(CB_color_cycle_2[0], 0.5)],
         alpha=1,
         zorder=1.5,
     )
@@ -2581,7 +2580,7 @@ def make_Bvis_plot_LFV(
         Y,
         Z,
         levels=[Nsig],
-        colors=CB_color_cycle[0],
+        colors=CB_color_cycle_2[0],
         linestyles="-",
         linewidths=[1],
         alpha=1,
@@ -2597,7 +2596,7 @@ def make_Bvis_plot_LFV(
         Y,
         Z,
         levels=[Nsig, 1e100],
-        colors=[lighten_color(CB_color_cycle[1], 0.5)],
+        colors=[lighten_color(CB_color_cycle_2[1], 0.5)],
         alpha=1,
         zorder=1.4,
     )
@@ -2606,7 +2605,7 @@ def make_Bvis_plot_LFV(
         Y,
         Z,
         levels=[Nsig],
-        colors=CB_color_cycle[1],
+        colors=CB_color_cycle_2[1],
         linestyles="-",
         linewidths=[1],
         alpha=1,
@@ -2615,7 +2614,7 @@ def make_Bvis_plot_LFV(
     labels.append(c.legend_elements()[0][0])
     labelnames.append("BEBC")
 
-    # X,Y,Z = np.load(f'data/NA62_rates{name}.npy', allow_pickle=True)
+    # X,Y,Z = np.load(f'data/NA62_rates_{name}.npy', allow_pickle=True)
     # c = ax.contourf(X, Y, Z, levels=[Nsig, 1e100], colors=[lighten_color('firebrick', 0.85)], alpha=1, zorder=1.1)
     # _ = ax.contour(X, Y, Z, levels=[Nsig], colors='firebrick', linestyles='-', linewidths=[1], alpha=1, zorder=2)
     # labels.append(c.legend_elements()[0][0])
@@ -2629,7 +2628,7 @@ def make_Bvis_plot_LFV(
         Y,
         Z,
         levels=[Nsig],
-        colors=CB_color_cycle[0],
+        colors=CB_color_cycle_2[0],
         linestyles=[(1, (2, 1))],
         linewidths=[1.25],
         alpha=1,
@@ -2648,7 +2647,7 @@ def make_Bvis_plot_LFV(
         Y,
         Z,
         levels=[Nsig],
-        colors=CB_color_cycle[1],
+        colors=CB_color_cycle_2[1],
         linestyles=[(1, (4, 1))],
         linewidths=[1.25],
         alpha=1,
@@ -2665,7 +2664,7 @@ def make_Bvis_plot_LFV(
         Y,
         Z,
         levels=[Nsig],
-        colors=CB_color_cycle[0],
+        colors=CB_color_cycle_2[0],
         linestyles=[(1, (6, 0))],
         linewidths=[1.25],
         alpha=1,
@@ -2811,7 +2810,7 @@ def make_Bvis_plot_LFC(
         Y,
         Z,
         levels=[Nsig, 1e100],
-        colors=[lighten_color(CB_color_cycle[0], 0.5)],
+        colors=[lighten_color(CB_color_cycle_2[0], 0.5)],
         alpha=1,
         zorder=1.5,
     )
@@ -2820,7 +2819,7 @@ def make_Bvis_plot_LFC(
         Y,
         Z,
         levels=[Nsig],
-        colors=CB_color_cycle[0],
+        colors=CB_color_cycle_2[0],
         linestyles="-",
         linewidths=[1],
         alpha=1,
@@ -2836,7 +2835,7 @@ def make_Bvis_plot_LFC(
         Y,
         Z,
         levels=[Nsig, 1e100],
-        colors=[lighten_color(CB_color_cycle[1], 0.5)],
+        colors=[lighten_color(CB_color_cycle_2[1], 0.5)],
         alpha=1,
         zorder=1.4,
     )
@@ -2845,7 +2844,7 @@ def make_Bvis_plot_LFC(
         Y,
         Z,
         levels=[Nsig],
-        colors=CB_color_cycle[1],
+        colors=CB_color_cycle_2[1],
         linestyles="-",
         linewidths=[1],
         alpha=1,
@@ -2854,7 +2853,7 @@ def make_Bvis_plot_LFC(
     labels.append(c.legend_elements()[0][0])
     labelnames.append("BEBC")
 
-    # X,Y,Z = np.load(f'data/NA62_rates{name}.npy', allow_pickle=True)
+    # X,Y,Z = np.load(f'data/NA62_rates_{name}.npy', allow_pickle=True)
     # c = ax.contourf(X, Y, Z, levels=[Nsig, 1e100], colors=[lighten_color('firebrick', 0.85)], alpha=1, zorder=1.1)
     # _ = ax.contour(X, Y, Z, levels=[Nsig], colors='firebrick', linestyles='-', linewidths=[1], alpha=1, zorder=2)
     # labels.append(c.legend_elements()[0][0])
@@ -2868,7 +2867,7 @@ def make_Bvis_plot_LFC(
         Y,
         Z,
         levels=[Nsig],
-        colors=CB_color_cycle[0],
+        colors=CB_color_cycle_2[0],
         linestyles=[(1, (2, 1))],
         linewidths=[1.25],
         alpha=1,
@@ -2887,7 +2886,7 @@ def make_Bvis_plot_LFC(
         Y,
         Z,
         levels=[Nsig],
-        colors=CB_color_cycle[1],
+        colors=CB_color_cycle_2[1],
         linestyles=[(1, (4, 1))],
         linewidths=[1.25],
         alpha=1,
@@ -2904,7 +2903,7 @@ def make_Bvis_plot_LFC(
         Y,
         Z,
         levels=[Nsig],
-        colors=CB_color_cycle[0],
+        colors=CB_color_cycle_2[0],
         linestyles=[(1, (6, 0))],
         linewidths=[1.25],
         alpha=1,

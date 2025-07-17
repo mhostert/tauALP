@@ -2,11 +2,9 @@ import os
 import numpy as np
 import pandas as pd
 import glob
-from concurrent.futures import ThreadPoolExecutor
 
 from DarkNews import Cfourvec as Cfv
 
-from . import const
 from . import models
 
 
@@ -54,7 +52,7 @@ def read_pythia_file_with_attrs(file_path, n_header_lines=8):
 
 def load_events(
     file_names,
-    apply_tauBR_weights=False,
+    apply_tauBR_weights=True,
     apply_xsec_weights=True,
 ):
     """
@@ -411,7 +409,7 @@ class Experiment:
         else:
             # 3 or 4-body, so perform a MC numerical integral using our own samples
             self.tau_BRs[production_channel] = np.sum(
-                alp.tau_diff_BR(ECM_alp, production_channel) / self.nevents
+                alp.tau_diff_BR(ECM_alp, production_channel) / n_taus
             ) * (alp.Ea_max[production_channel] - alp.Ea_min[production_channel])
 
         self.weights = self.tau_weights[mask_taus] * self.tau_BRs[production_channel]

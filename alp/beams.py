@@ -15,6 +15,37 @@ xsec_ccbar = {
 frag_fractions = {"Ds+": 0.081, "D+": 0.244, "D0": 0.606, "D-": 0.244}
 
 
+def get_xF(p4, p_beam, CoM=False):
+    n_events = np.shape(p4)[0]
+    p4_beam = np.zeros((n_events, 4))
+    p4_beam[:, 0] = np.ones(n_events) * np.sqrt(const.m_proton**2 + p_beam**2)
+    p4_beam[:, 3] = np.ones(n_events) * p_beam
+    if CoM:
+        p4_CM = p4
+        p4_beam_CM = p4_beam
+    else:
+        # Boost to the center of mass frame
+        beta = (
+            p_beam
+            / (np.sqrt(p_beam**2 + const.m_proton**2) + const.m_proton)
+            * np.ones(n_events)
+        )
+        p4_CM = Cfv.L(p4, beta)
+        p4_beam_CM = Cfv.L(p4_beam, beta)
+
+    return p4_CM[:, -1] / p4_beam_CM[:, -1]
+
+
+def get_pTSQR(p4):
+    pT = Cfv.getXYnorm(p4)
+    return pT**2
+
+
+def get_pT(p4):
+    pT = Cfv.getXYnorm(p4)
+    return pT
+
+
 def generate_Ds(p_beam=120, n_events=1000, a=2.0, b=1.0, n_exp=5):
     """
     Generate n 4-momenta of Ds mesons using the provided differential cross section shape.

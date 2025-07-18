@@ -41,3 +41,10 @@ This repo contains the work for the following publication:
 * `5_lfv_uncertainty_study.ipynb`: some tests and studies with the simplified approach to generate taus.
 
 The Pythia event generation is performed in `.cpp` and `generate_taus.py` files.
+
+#### Requirements
+
+* numpy
+* pandas 
+* scipy
+* DarkNews

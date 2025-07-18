@@ -31,11 +31,13 @@ class ALP:
         mN=0,
         Bvis=1,
         c_lepton=None,
+        force_LFC_flat=False,
     ):
         self.f_a = f_a
         self.m_a = m_a
         self.mN = mN
         self.Lambda_NP = 4 * np.pi * self.f_a
+        self.force_LFC_flat = force_LFC_flat
 
         # NOTE: democratic couplings
         if c_lepton is None:

@@ -1000,11 +1000,12 @@ def main_plot_LFC(
     name_modifier="",
     vlines=True,
     linewidth=0.5,
+    plot_other_limits=True,
 ):
 
     fig, ax = std_fig(figsize=figsize)
-
-    plot_other_limits_LFC(ax, linewidth=linewidth, c_lepton=c_lepton)
+    if plot_other_limits:
+        plot_other_limits_LFC(ax, linewidth=linewidth, c_lepton=c_lepton)
 
     # labels for legend
     labels = []
@@ -1060,83 +1061,83 @@ def main_plot_LFC(
     labels.append(c.legend_elements()[0][0])
     labelnames.append("BEBC")
 
-    X1, Y1, Z1 = np.load(f"data/ProtoDUNE-NP02_rates_{name}.npy", allow_pickle=True)
-    _, _, Z2 = np.load(f"data/ProtoDUNE-NP02_rates_{name}.npy", allow_pickle=True)
-    X, Y, Z = X1, Y1, Z1 + Z2
-    c = ax.contour(
-        X,
-        Y**fa_power,
-        Z,
-        levels=[Nsig],
-        colors=CB_color_cycle_2[0],
-        linestyles=[(1, (3, 2))],
-        linewidths=[1.75],
-        alpha=1,
-        zorder=2,
-    )
-    labels.append(c.legend_elements()[0][0])
-    labelnames.append(r"ProtoDUNE")
-
-    if plot_DUNEs:
-        X, Y, Z = np.load(f"data/DUNE-ND_rates_{name}.npy", allow_pickle=True)
-        c = ax.contour(
-            X,
-            Y**fa_power,
-            Z,
-            levels=[Nsig],
-            colors="limegreen",
-            linestyles=[(1, (1, 0))],
-            linewidths=[1.75],
-            alpha=1,
-            zorder=2,
-        )
-        labels.append(c.legend_elements()[0][0])
-        labelnames.append(r"DUNE ND")
-
-        # X,Y,Z = np.load(f'data/2x2 protoDUNE-ND_rates_{name}.npy', allow_pickle=True)
-        # if smear:
-        #     Z = scipy.ndimage.filters.gaussian_filter(Z, smear_stddev, mode="nearest", order=0, cval=0)
-        # c = ax.contour(X, Y**fa_power, Z, levels=[Nsig], colors='red', linestyles=[(1,(1,1))], linewidths=[1.75], alpha=1, zorder=2)
-        # labels.append(c.legend_elements()[0][0])
-        # labelnames.append(r'2x2 protoDUNE ND')
-
-    # X,Y,Z = np.load(f'data/FASER_rates_{name}.npy', allow_pickle=True)
-    # if smear:
-    #     Z = scipy.ndimage.filters.gaussian_filter(Z, 2*smear_stddev, mode="nearest", order=0, cval=0)
-    # # c = ax.contourf(X, Y**fa_power, Z, levels=[Nsig, 1e100], colors=[lighten_color='black', 0.95)], alpha=1, zorder=1.91)
-    # c = ax.contour(X, Y**fa_power, Z, levels=[Nsig], colors='black', linestyles=[(0,(2,2))], linewidths=[1.5], alpha=1, zorder=2)
+    # X1, Y1, Z1 = np.load(f"data/ProtoDUNE-NP02_rates_{name}.npy", allow_pickle=True)
+    # _, _, Z2 = np.load(f"data/ProtoDUNE-NP02_rates_{name}.npy", allow_pickle=True)
+    # X, Y, Z = X1, Y1, Z1 + Z2
+    # c = ax.contour(
+    #     X,
+    #     Y**fa_power,
+    #     Z,
+    #     levels=[Nsig],
+    #     colors=CB_color_cycle_2[0],
+    #     linestyles=[(1, (3, 2))],
+    #     linewidths=[1.75],
+    #     alpha=1,
+    #     zorder=2,
+    # )
     # labels.append(c.legend_elements()[0][0])
-    # labelnames.append('FASER')
+    # labelnames.append(r"ProtoDUNE")
 
-    X, Y, Z = np.load(f"data/FASER2_rates_{name}.npy", allow_pickle=True)
-    c = ax.contour(
-        X,
-        Y**fa_power,
-        Z,
-        levels=[Nsig],
-        colors="black",
-        linestyles=[(1, (5, 1))],
-        linewidths=[1.5],
-        alpha=1,
-        zorder=2,
-    )
-    labels.append(c.legend_elements()[0][0])
-    labelnames.append(r"FASER-2")
+    # if plot_DUNEs:
+    #     X, Y, Z = np.load(f"data/DUNE-ND_rates_{name}.npy", allow_pickle=True)
+    #     c = ax.contour(
+    #         X,
+    #         Y**fa_power,
+    #         Z,
+    #         levels=[Nsig],
+    #         colors="limegreen",
+    #         linestyles=[(1, (1, 0))],
+    #         linewidths=[1.75],
+    #         alpha=1,
+    #         zorder=2,
+    #     )
+    #     labels.append(c.legend_elements()[0][0])
+    #     labelnames.append(r"DUNE ND")
 
-    X, Y, Z = np.load(f"data/SHiP_rates_{name}.npy", allow_pickle=True)
-    c = ax.contour(
-        X,
-        Y**fa_power,
-        Z,
-        levels=[Nsig],
-        colors="black",
-        linestyles="-",
-        linewidths=[1.75],
-        alpha=1,
-        zorder=2,
-    )
-    labels.append(c.legend_elements()[0][0])
-    labelnames.append(r"SHiP")
+    #     # X,Y,Z = np.load(f'data/2x2 protoDUNE-ND_rates_{name}.npy', allow_pickle=True)
+    #     # if smear:
+    #     #     Z = scipy.ndimage.filters.gaussian_filter(Z, smear_stddev, mode="nearest", order=0, cval=0)
+    #     # c = ax.contour(X, Y**fa_power, Z, levels=[Nsig], colors='red', linestyles=[(1,(1,1))], linewidths=[1.75], alpha=1, zorder=2)
+    #     # labels.append(c.legend_elements()[0][0])
+    #     # labelnames.append(r'2x2 protoDUNE ND')
+
+    # # X,Y,Z = np.load(f'data/FASER_rates_{name}.npy', allow_pickle=True)
+    # # if smear:
+    # #     Z = scipy.ndimage.filters.gaussian_filter(Z, 2*smear_stddev, mode="nearest", order=0, cval=0)
+    # # # c = ax.contourf(X, Y**fa_power, Z, levels=[Nsig, 1e100], colors=[lighten_color='black', 0.95)], alpha=1, zorder=1.91)
+    # # c = ax.contour(X, Y**fa_power, Z, levels=[Nsig], colors='black', linestyles=[(0,(2,2))], linewidths=[1.5], alpha=1, zorder=2)
+    # # labels.append(c.legend_elements()[0][0])
+    # # labelnames.append('FASER')
+
+    # X, Y, Z = np.load(f"data/FASER2_rates_{name}.npy", allow_pickle=True)
+    # c = ax.contour(
+    #     X,
+    #     Y**fa_power,
+    #     Z,
+    #     levels=[Nsig],
+    #     colors="black",
+    #     linestyles=[(1, (5, 1))],
+    #     linewidths=[1.5],
+    #     alpha=1,
+    #     zorder=2,
+    # )
+    # labels.append(c.legend_elements()[0][0])
+    # labelnames.append(r"FASER-2")
+
+    # X, Y, Z = np.load(f"data/SHiP_rates_{name}.npy", allow_pickle=True)
+    # c = ax.contour(
+    #     X,
+    #     Y**fa_power,
+    #     Z,
+    #     levels=[Nsig],
+    #     colors="black",
+    #     linestyles="-",
+    #     linewidths=[1.75],
+    #     alpha=1,
+    #     zorder=2,
+    # )
+    # labels.append(c.legend_elements()[0][0])
+    # labelnames.append(r"SHiP")
 
     if legend:
         ax.legend(

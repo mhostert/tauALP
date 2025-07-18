@@ -397,7 +397,6 @@ class Experiment:
             ctheta_tau_LAB,
             phitau_LAB,
         )
-
         self.p4_1, self.p4_2 = self.sample_alp_daughter_4momenta(
             decay_channel=decay_channel, alp=alp, nevents=n_taus
         )
@@ -406,13 +405,18 @@ class Experiment:
         if production_channel == "tau>e+a" or production_channel == "tau>mu+a":
             # 2-body, then exactly calculable,
             self.tau_BRs[production_channel] = alp.tau_BR(production_channel)
+            self.weights = (
+                self.tau_weights[mask_taus] * self.tau_BRs[production_channel]
+            )
         else:
             # 3 or 4-body, so perform a MC numerical integral using our own samples
             self.tau_BRs[production_channel] = np.sum(
                 alp.tau_diff_BR(ECM_alp, production_channel) / n_taus
             ) * (alp.Ea_max[production_channel] - alp.Ea_min[production_channel])
 
-        self.weights = self.tau_weights[mask_taus] * self.tau_BRs[production_channel]
+            self.weights = self.tau_weights[mask_taus] * alp.tau_diff_BR(
+                ECM_alp, production_channel
+            )
 
         return self.p4_alp, self.p4_1, self.p4_2, self.weights
 
@@ -441,7 +445,6 @@ class Experiment:
             ]
             for decay in self.final_states
         }
-
         # Normalize and filter
         total = sum(dic_channel_weights.values())
         dic_channel_weights = {
@@ -494,7 +497,9 @@ class Experiment:
             p4_alp[insert_idx : insert_idx + n_events] = p_alp
             p4_d1[insert_idx : insert_idx + n_events] = p1
             p4_d2[insert_idx : insert_idx + n_events] = p2
-            weights[insert_idx : insert_idx + n_events] = w
+            weights[insert_idx : insert_idx + n_events] = (
+                w / dic_channel_weights[(prod_channel, decay_channel)]
+            )
             insert_idx += n_events
 
         # Final assignment
@@ -546,7 +551,7 @@ class Experiment:
 
         del v_alp, v_daughter1, v_daughter2
 
-        return self.p4_alp, self.weights  # , self.channel_list
+        return self.p4_alp, self.weights
 
     def get_alps_in_acceptance(self, generate_events=True, alp=None):
 

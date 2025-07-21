@@ -1,40 +1,54 @@
 import numpy as np
 from scipy.integrate import quad
 from scipy.integrate import dblquad
-
-from DarkNews import Cfourvec as Cfv
+import vector
 
 
 def decay_2_body(p4_parent, m_P, m_1, m_2):
     """
-    Generate daughter 4-momenta for P --> 1 + 2 decay for an arbitrary parent 4-momenta.
-    """
-    nevents = p4_parent.shape[0]
+    Generate daughter 4-momenta for P --> 1 + 2 decay
+    in the lab frame, using the vector package.
 
-    # Flat dOmega = dcos(theta) * dphi
+    Parameters
+    ----------
+    p4_parent : vector.array
+        4-momentum of parent particles (Lorentz vector array of shape (N,))
+    m_P : float
+        Mass of parent particle
+    m_1 : float
+        Mass of daughter 1
+    m_2 : float
+        Mass of daughter 2
+
+    Returns
+    -------
+    p4_1_lab : vector.array
+        Lorentz vectors of daughter 1 in the lab frame (shape (N,))
+    """
+    nevents = len(p4_parent["E"])
+
+    # Sample flat directions in CM frame
     phi = np.random.uniform(0, 2 * np.pi, nevents)
     ctheta = np.random.uniform(-1, 1, nevents)
+    stheta = np.sqrt(1 - ctheta**2)
 
-    # Sampling ALP energy from different production channels
-    ECM = (m_P**2 + m_1**2 - m_2**2) / 2 / m_P * np.ones(nevents)
-    pCM = np.zeros_like(ECM)
-    pCM[ECM > m_1] = np.sqrt(ECM[ECM > m_1] ** 2 - m_1**2)
+    # Energy and momentum of daughter 1 in CM frame
+    E_CM = (m_P**2 + m_1**2 - m_2**2) / (2 * m_P)
+    p_CM = np.sqrt(np.maximum(E_CM**2 - m_1**2, 0.0))  # Safe sqrt
 
-    # Build ALP 4 momenta
-    p4_1_CM = Cfv.build_fourvec(ECM, pCM, ctheta, phi)
-    p_parent = Cfv.get_3vec_norm(p4_parent)
-    ctheta_LAB = Cfv.get_cosTheta(p4_parent)
-    phi_LAB = np.arctan2(p4_parent[:, 2], p4_parent[:, 1])
-    beta = -p_parent / p4_parent[:, 0]
-    beta[beta < -1] = -1
-    p4_1 = Cfv.Tinv(
-        p4_1_CM,
-        beta,
-        ctheta_LAB,
-        phi_LAB,
-    )
+    # 3-momentum components in CM frame
+    px = p_CM * stheta * np.cos(phi)
+    py = p_CM * stheta * np.sin(phi)
+    pz = p_CM * ctheta
+    E = np.full(nevents, E_CM)
 
-    return p4_1
+    # Build 4-vectors of daughter 1 in CM frame
+    p4_1_CM = vector.array({"px": px, "py": py, "pz": pz, "E": E})
+
+    # Boost daughter 1 to lab frame using parent 4-momentum
+    p4_1_lab = p4_1_CM.boost_p4(p4_parent)
+
+    return p4_1_lab
 
 
 def v_2body(m_parent, m_a, m_l):

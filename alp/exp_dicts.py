@@ -61,7 +61,7 @@ EXPERIMENTS: dict[str, dict] = {
         "y0": 0,
         "dX": 3.9e2,
         "dY": 3.9e2,
-        "dZ": 12.7e2,
+        "dZ": 2.7e2,
         "active_volume": True,
         "norm": NuMI_tau_per_POT * 4.2e21,
         "Emin": 0.1,

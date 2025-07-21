@@ -47,4 +47,4 @@ The Pythia event generation is performed in `.cpp` and `generate_taus.py` files.
 * numpy
 * pandas 
 * scipy
-* DarkNews
+* vector

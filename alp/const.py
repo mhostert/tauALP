@@ -1,6 +1,6 @@
 """Constant modules
 
-Here are defined the most common constants used in DarkNews.
+Here are defined the most common constants used.
 
 We use PDG2020 values for constants and SM masses.
 
@@ -134,13 +134,6 @@ m_charged_Ds_star = 2.1122
 # QED
 alphaQED = 1.0 / 137.03599908421  # Fine structure constant at q2 -> 0
 eQED = np.sqrt((4 * np.pi) * alphaQED)
-
-# get running alphaQED
-Q, inv_alphaQED = np.genfromtxt(
-    files("DarkNews.include.aux_data").joinpath("alpha_QED_running_posQ2.dat").open(),
-    unpack=True,
-)
-runningAlphaQED = interpolate.interp1d(Q, 1.0 / inv_alphaQED)
 
 ################################################
 # Weak sector

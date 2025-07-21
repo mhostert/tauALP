@@ -1,9 +1,8 @@
-import pandas as pd
 import numpy as np
 
 from scipy.stats import gamma
 
-from DarkNews import Cfourvec as Cfv
+import vector
 from . import const
 from . import phase_space as ps
 
@@ -15,11 +14,36 @@ xsec_ccbar = {
 frag_fractions = {"Ds+": 0.081, "D+": 0.244, "D0": 0.606, "D-": 0.244}
 
 
+def concatenate_vectors(p1, p2):
+    """
+    Concatenate two vector arrays along the first axis.
+    """
+
+    if len(p1["E"]) == 0:
+        return p2
+    if len(p2["E"]) == 0:
+        return p1
+    return vector.array(
+        {
+            "E": np.concatenate([p1["E"], p2["E"]]),
+            "px": np.concatenate([p1["px"], p2["px"]]),
+            "py": np.concatenate([p1["py"], p2["py"]]),
+            "pz": np.concatenate([p1["pz"], p2["pz"]]),
+        }
+    )
+
+
 def get_xF(p4, p_beam, CoM=False):
-    n_events = np.shape(p4)[0]
-    p4_beam = np.zeros((n_events, 4))
-    p4_beam[:, 0] = np.ones(n_events) * np.sqrt(const.m_proton**2 + p_beam**2)
-    p4_beam[:, 3] = np.ones(n_events) * p_beam
+    n_events = p4.size
+    p4_beam = vector.array(
+        {
+            "px": np.zeros(n_events),
+            "py": np.zeros(n_events),
+            "pz": np.ones(n_events) * p_beam,
+            "E": np.sqrt(const.m_proton**2 + p_beam**2) * np.ones(n_events),
+        }
+    )
+
     if CoM:
         p4_CM = p4
         p4_beam_CM = p4_beam
@@ -30,20 +54,10 @@ def get_xF(p4, p_beam, CoM=False):
             / (np.sqrt(p_beam**2 + const.m_proton**2) + const.m_proton)
             * np.ones(n_events)
         )
-        p4_CM = Cfv.L(p4, beta)
-        p4_beam_CM = Cfv.L(p4_beam, beta)
+        p4_CM = p4.boostZ(-beta)
+        p4_beam_CM = p4_beam.boostZ(-beta)
 
-    return p4_CM[:, -1] / p4_beam_CM[:, -1]
-
-
-def get_pTSQR(p4):
-    pT = Cfv.getXYnorm(p4)
-    return pT**2
-
-
-def get_pT(p4):
-    pT = Cfv.getXYnorm(p4)
-    return pT
+    return p4_CM["pz"] / p4_beam_CM["pz"]
 
 
 def generate_Ds(p_beam=120, n_events=1000, a=2.0, b=1.0, n_exp=5):
@@ -75,17 +89,21 @@ def generate_Ds(p_beam=120, n_events=1000, a=2.0, b=1.0, n_exp=5):
     phi = np.random.uniform(0, 2 * np.pi, size=n_events)
     sqrt_s = np.sqrt(2 * np.sqrt(p_beam**2 + const.m_proton**2) * const.m_proton)
     pz_CM_max = sqrt_s / 2
-    pz = x_F * pz_CM_max
-    px = p_T * np.cos(phi)
-    py = p_T * np.sin(phi)
-    E = np.sqrt(px**2 + py**2 + pz**2 + const.m_charged_Ds**2)
-    p4_CM = np.column_stack((E, px, py, pz))
+    p4_CM = vector.array(
+        {
+            "E": np.sqrt(p_T**2 + (x_F * pz_CM_max) ** 2 + const.m_charged_Ds**2),
+            "px": p_T * np.cos(phi),
+            "py": p_T * np.sin(phi),
+            "pz": x_F * pz_CM_max,
+        }
+    )
     beta = (
         p_beam
         / (np.sqrt(p_beam**2 + const.m_proton**2) + const.m_proton)
         * np.ones(n_events)
     )
-    p4 = Cfv.L(p4_CM, -beta)
+    # NOTE: check minus signs here
+    p4 = p4_CM.boostZ(beta)
     # Weight from the given differential cross section (unnormalized)
     weight = (1 - abs(x_F)) ** n_exp * np.exp(-(a * p_T + b * p_T2))
 
@@ -97,7 +115,7 @@ def generate_taus_with_custom_method(
     p_beam=120,
     pT_max=30.0,
     CoM=False,
-    as_dataframe=False,
+    as_dict=False,
     pid=15,
     n_events=1000,
     cone_force_acceptance=None,
@@ -113,7 +131,14 @@ def generate_taus_with_custom_method(
     n_events = int(n_events)
 
     n_generated = 0
-    p4_tau = np.empty((0, 4))
+    p4_tau = vector.array(
+        {
+            "E": [],
+            "px": [],
+            "py": [],
+            "pz": [],
+        }
+    )
     weights = np.empty(0)
     w_total = 0
     if n_trials is None:
@@ -123,33 +148,42 @@ def generate_taus_with_custom_method(
         w_trial = np.ones(n_trials)
 
         # sample xF from a log-uniform distribution
-        log10_x_F_abs = np.random.uniform(-4, 1, size=n_trials)
-        x_F = 10**log10_x_F_abs * np.random.choice(
-            [-1, 1], size=n_trials
-        )  # Randomly assign sign to xF
+        log10_x_F_abs = np.random.uniform(-4, 0, size=n_trials)
+        # Randomly assign sign to xF
+        x_F = 10**log10_x_F_abs * np.random.choice([-1, 1], size=n_trials)
+
+        # x_F = np.random.uniform(-1, 1, size=n_trials)
 
         # final desired pdf for xF
-        x_F_pdf_final = (
-            params["r_1"] * np.exp(-params["a_1"] * abs(x_F) ** params["n_1"])
-            + params["r_2"] * np.exp(-params["a_2"] * abs(x_F) ** params["n_2"])
-            + params["r_3"] * np.exp(-params["a_3"] * abs(x_F) ** params["n_3"])
-        )
-        x_F_pdf_final /= np.trapz(x_F_pdf_final, x_F)  # normalize the pdf
+        x_F_pdf_final = params["r_1"] * np.exp(
+            -params["a_1"] * abs(x_F) ** params["n_1"]
+        ) + params["r_2"] * np.exp(-params["a_2"] * abs(x_F) ** params["n_2"])
 
+        # x_F_pdf_final /= np.trapz(x_F_pdf_final, abs(x_F))  # normalize the pdf
         w_trial *= x_F_pdf_final * abs(x_F)
+        # w_trial *= x_F_pdf_final
 
         # p_T = np.random.gamma(shape=params["mu1"], scale=params["lambda1"], size=n_trials)
         log10_p_T = np.random.uniform(-4, np.log10(pT_max), size=n_trials)
         p_T = 10**log10_p_T  # sample pT from a log-uniform distribution
 
-        p_T_pdf_final = params["g_1"] * gamma.pdf(
-            p_T ** params["m_1"],
-            a=params["mu_1"],
-            scale=params["lambda_1"],
-        ) + params["g_2"] * gamma.pdf(
-            p_T ** params["m_2"], a=params["mu_2"], scale=params["lambda_2"]
+        p_T_pdf_final = (
+            params["g_1"]
+            * gamma.pdf(
+                p_T ** params["m_1"],
+                a=params["mu_1"],
+                scale=params["lambda_1"],
+            )
+            + params["g_2"]
+            * gamma.pdf(
+                p_T ** params["m_2"], a=params["mu_2"], scale=params["lambda_2"]
+            )
+            + params["g_3"]
+            * gamma.pdf(
+                p_T ** params["m_3"], a=params["mu_3"], scale=params["lambda_3"]
+            )
         )
-        p_T_pdf_final /= np.trapz(p_T_pdf_final, p_T)  # normalize the pdf
+        # p_T_pdf_final /= np.trapz(p_T_pdf_final, p_T)  # normalize the pdf
 
         w_trial *= p_T_pdf_final * p_T
 
@@ -162,11 +196,14 @@ def generate_taus_with_custom_method(
                 2 * np.sqrt(p_beam**2 + const.m_proton**2) * const.m_proton
             )
         pz_CM_max = sqrt_s / 2
-        pz = x_F * pz_CM_max
-        px = p_T * np.cos(phi)
-        py = p_T * np.sin(phi)
-        E = np.sqrt(px**2 + py**2 + pz**2 + const.m_tau**2)
-        p4_CM = np.column_stack((E, px, py, pz))
+        p4_CM = vector.array(
+            {
+                "pz": x_F * pz_CM_max,
+                "px": p_T * np.cos(phi),
+                "py": p_T * np.sin(phi),
+                "E": np.sqrt(p_T**2 + (x_F * pz_CM_max) ** 2 + const.m_tau**2),
+            }
+        )
 
         if CoM:
             p4_lab = p4_CM
@@ -177,16 +214,17 @@ def generate_taus_with_custom_method(
                 / (np.sqrt(p_beam**2 + const.m_proton**2) + const.m_proton)
                 * np.ones(n_trials)
             )
-            p4_lab = Cfv.L(p4_CM, -beta)
+            # NOTE: check minus signs here
+            p4_lab = p4_CM.boostZ(beta)
 
         # If force events in acceptance, count only accepted ones
         if isinstance(cone_force_acceptance, list):
             x0, y0, L, R = cone_force_acceptance
-            v_tau = Cfv.get_3direction(p4_lab)
-            x_tau_p0 = v_tau[:, 0] * L
-            y_tau_p0 = v_tau[:, 1] * L
+            v_tau = p4_lab.to_3D().unit()
+            x_tau_p0 = v_tau["x"] * L
+            y_tau_p0 = v_tau["y"] * L
 
-            accepted = (x_tau_p0 - x0) ** 2 + (y_tau_p0 - y0) ** 2 < R**2
+            accepted = np.sqrt((x_tau_p0 - x0) ** 2 + (y_tau_p0 - y0) ** 2) < R
             n_generated += accepted.sum()
             w_total += w_trial.sum()
 
@@ -196,28 +234,35 @@ def generate_taus_with_custom_method(
             w_total += w_trial.sum()
 
         weights = np.concatenate([weights, w_trial[accepted]])
-        p4_tau = np.concatenate([p4_tau, p4_lab[accepted]])
+        p4_tau = concatenate_vectors(p4_tau, p4_lab)
         w_accepted = weights.sum()
 
         efficiency = w_accepted / w_total
+        print(f"Generated {n_generated} taus, efficiency: {efficiency:.4f}")
 
         if accepted.sum() > n_events:
             weights = weights[:n_events]
             p4_tau = p4_tau[:n_events]
 
-    if as_dataframe:
-        df = pd.DataFrame(p4_tau, columns=["E", "px", "py", "pz"])
-        weights = weights / np.sum(weights) / 2  # normalize the weights
-        df["weights"] = weights * efficiency
-        df["pid"] = pid
+    # Account for tau+ and tau- separate production
+    weights = weights / np.sum(weights) / 2  # normalize the weights
 
-        return df
+    if as_dict:
+        tau_dict = {
+            "E": p4_tau["E"],
+            "px": p4_tau["px"],
+            "py": p4_tau["py"],
+            "pz": p4_tau["pz"],
+            "weights": weights * efficiency,
+            "pid": np.full(len(p4_tau), pid, dtype=int),
+        }
+
+        return tau_dict
     else:
-        weights = weights / np.sum(weights) / 2  # normalize the weights
         return p4_tau, weights * efficiency
 
 
-def generate_taus(p_beam=120, n_events=1000, a=2.0, b=1.0, n_exp=5, as_dataframe=False):
+def generate_taus(p_beam=120, n_events=1000, a=2.0, b=1.0, n_exp=5, as_dict=False):
     """
     Generate n 4-momenta of tau leptons using the provided differential cross section shape.
 
@@ -235,27 +280,33 @@ def generate_taus(p_beam=120, n_events=1000, a=2.0, b=1.0, n_exp=5, as_dataframe
     p4_Dsm, wm = generate_Ds(p_beam, n_events, a, b, n_exp)
 
     # concatenate
-    p4_Ds = np.concatenate((p4_Dsp, p4_Dsm), axis=0)
-    w = np.concatenate((wp, wm), axis=0)
+
+    p4_Ds = concatenate_vectors(p4_Dsp, p4_Dsm)
+
+    w = np.concatenate((wp, wm))
 
     # Generate tau momenta from Ds momenta
     p4_tau = ps.decay_2_body(p4_Ds, const.m_charged_Ds, const.m_tau, 0.0)
     w = w * frag_fractions["Ds+"]
 
-    if as_dataframe:
-        df = pd.DataFrame(p4_tau, columns=["E", "px", "py", "pz"])
-        df["weights"] = w
-        df["E_mother"] = p4_Ds[:, 0]
-        df["px_mother"] = p4_Ds[:, 1]
-        df["py_mother"] = p4_Ds[:, 2]
-        df["pz_mother"] = p4_Ds[:, 3]
-        df["mother_pid"] = np.zeros(len(p4_tau), dtype=int)
-        df.loc[: len(p4_Dsp), "mother_pid"] = 431
-        df.loc[len(p4_Dsp) :, "mother_pid"] = -431
-        df["pid"] = np.zeros(len(p4_tau), dtype=int)
-        df.loc[: len(p4_Dsp), "pid"] = 15
-        df.loc[len(p4_Dsp) :, "pid"] = -15
+    if as_dict:
+        tau_dict = {}
+        tau_dict["weights"] = w
+        tau_dict["E_mother"] = p4_Ds["E"]
+        tau_dict["px_mother"] = p4_Ds["px"]
+        tau_dict["py_mother"] = p4_Ds["py"]
+        tau_dict["pz_mother"] = p4_Ds["pz"]
+        tau_dict["E"] = p4_tau["E"]
+        tau_dict["px"] = p4_tau["px"]
+        tau_dict["py"] = p4_tau["py"]
+        tau_dict["pz"] = p4_tau["pz"]
+        tau_dict["mother_pid"] = np.zeros(len(p4_tau), dtype=int)
+        tau_dict["mother_pid"][: len(p4_Dsp)] = 431
+        tau_dict["mother_pid"][len(p4_Dsp) :] = -431
+        tau_dict["pid"] = np.zeros(len(p4_tau), dtype=int)
+        tau_dict["pid"][: len(p4_Dsp)] = 15
+        tau_dict["pid"][len(p4_Dsp) :] = -15
 
-        return df
+        return tau_dict
     else:
         return p4_tau, w

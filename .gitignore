@@ -1,4 +1,5 @@
 pythia8_events/*.parquet
+pythia8_events/*.pkl
 pythia8_cluster/*
 tau_events/*
 .DS_Store

@@ -3,7 +3,7 @@
 This repo contains the work for the following publication:
 
 ## Citation
-
+```
 @article{Ema:2025bww,
     author = "Ema, Yohei and Fox, Patrick J. and Hostert, Matheus and Menzo, Tony and Pospelov, Maxim and Ray, Anupam and Zupan, Jure",
     title = "{Long-lived Axion-Like Particles from Tau Decays}",
@@ -14,6 +14,7 @@ This repo contains the work for the following publication:
     month = "7",
     year = "2025"
 }
+```
 
 ## Description
 

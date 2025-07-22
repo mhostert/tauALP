@@ -4,9 +4,15 @@ This repo contains the work for the following publication:
 
 ## Citation
 
-@article{
-
-
+@article{Ema:2025bww,
+    author = "Ema, Yohei and Fox, Patrick J. and Hostert, Matheus and Menzo, Tony and Pospelov, Maxim and Ray, Anupam and Zupan, Jure",
+    title = "{Long-lived Axion-Like Particles from Tau Decays}",
+    eprint = "2507.15271",
+    archivePrefix = "arXiv",
+    primaryClass = "hep-ph",
+    reportNumber = "CERN-TH-2025-123, FERMILAB-PUB-25-0408-T, N3AS-25-011",
+    month = "7",
+    year = "2025"
 }
 
 ## Description

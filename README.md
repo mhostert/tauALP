@@ -1,6 +1,6 @@
 # $\tau$ALP
 
-This repo contains the work for the following publication:
+This repo contains the work for the following publication: [![DOI](https://zenodo.org/badge/917528957.svg)](https://zenodo.org/badge/latestdoi/917528957)
 
 ## Citation
 ```
